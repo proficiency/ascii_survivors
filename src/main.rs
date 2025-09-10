@@ -1,3 +1,5 @@
+mod sound;
+
 // infinitely scaling ascii souls game
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
@@ -62,6 +64,7 @@ struct GameState {
     pub ruleset: Ruleset,
     pub spawn_queue: Vec<i32>,
     pub store: Vec<i32>,
+    pub sound_manager: SoundManager,
 }
 
 impl GameState {
@@ -70,6 +73,7 @@ impl GameState {
             ruleset: Ruleset::default(),
             spawn_queue: Vec::new(),
             store: Vec::new(),
+            sound_manager: SoundManager::new("assets/sfx/".into()).unwrap(), // todo: error handling
         }
     }
 
@@ -91,6 +95,7 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     let mut state = GameState::new();
+    state.sound_manager.play_sound("assets/sfx/45_Charge_05.wav".into(), -8.0).unwrap();
     commands.spawn((
         Terminal::new([12, 1]).with_string([0, 0], "Hello world!".fg(color::BLUE)),
         TerminalBorder::single_line(),
