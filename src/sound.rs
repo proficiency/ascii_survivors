@@ -10,7 +10,8 @@ pub(crate) struct SoundManager {
 
 impl SoundManager {
     pub fn new(sound_path: PathBuf) -> Result<Self> {
-        let sound_files = std::fs::read_dir(&sound_path)?
+        let sound_files = std::fs::read_dir(&sound_path)
+            .unwrap_or_else(|_| std::fs::read_dir("./assets/sfx/").expect("Failed to read default sound directory")) // Fallback to default path
             .filter_map(|entry| {
                 let path = entry.ok()?.path();
                 let ext = path.extension()?.to_str()?;
