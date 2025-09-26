@@ -2,7 +2,9 @@ use anyhow::*;
 use kira::{AudioManager, AudioManagerSettings, Decibels, DefaultBackend, sound::static_sound::*};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use bevy::prelude::Resource;
 
+#[derive(Resource)]
 pub(crate) struct SoundManager {
     manager: AudioManager<DefaultBackend>,
     sounds: HashMap<String, StaticSoundData>,

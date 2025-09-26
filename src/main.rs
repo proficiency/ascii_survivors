@@ -1,39 +1,17 @@
 mod sound;
-
-// infinitely scaling ascii souls game
+use crate::sound::*;
 use bevy::prelude::*;
+use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;
-use rand::Rng; // For random number generation
-use crate::sound::SoundManager;
-
-
-
-// Define a simple color enum for terminal colors
-#[derive(Debug, Clone, Copy)]
-enum TerminalColor {
-    White,
-    Red,
-    Green,
-    Blue,
-    Yellow,
-    Cyan,
-    Magenta,
-    Black,
-}
-
-// Implement a simple method to apply color (this is a placeholder, as bevy_ascii_terminal might have its own way)
-// For now, we'll just draw characters without color
-
-trait Upgrade {
+use rand::*;
+/*trait Upgrade {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
     fn apply(&self, ruleset: &mut Ruleset);
 }
 
 #[derive(Debug)]
-struct SpellUpgrade {
-
-}
+struct SpellUpgrade {}
 
 impl Upgrade for SpellUpgrade {
     fn name(&self) -> &str {
@@ -45,12 +23,12 @@ impl Upgrade for SpellUpgrade {
     }
 
     fn apply(&self, ruleset: &mut Ruleset) {
-        // eventually take a Spell struct and modify it, constrain based on the upgrade type
+        // todo: eventually take a Spell struct and modify it, constrain based on the upgrade type
         ruleset.player_damage_modifier *= 1.2;
     }
-}
+}*/
 
-#[derive(Debug, Default)]
+#[derive(Resource, Debug, Default)]
 struct Ruleset {
     pub enemy_health_modifier: f32,
     pub enemy_damage_modifier: f32,
@@ -78,61 +56,52 @@ impl Ruleset {
     }
 }
 
-// Player component
 #[derive(Component)]
 struct Player {
     health: f32,
     max_health: f32,
     speed: f32,
-    position: IVec2, // Store player's position
+    position: IVec2,
 }
 
-// Enemy component
 #[derive(Component)]
 struct Enemy {
     health: f32,
     max_health: f32,
-    position: IVec2, // Store enemy's position
+    position: IVec2,
 }
 
 impl Enemy {
-    // Constructor for Enemy with default health
     fn new(position: IVec2) -> Self {
         Self {
-            health: 50.0, // Two-hit kill
+            health: 50.0, // two hit kill
             max_health: 50.0,
             position,
         }
     }
 }
 
-// Projectile component
 #[derive(Component)]
 struct Projectile {
     position: IVec2,
-    // direction: IVec2, // Direction of movement (no longer needed for homing)
-    target: Option<Entity>, // The enemy this projectile is targeting
+    // direction: IVec2,
+    target: Option<Entity>,
     damage: f32,
     speed: f32,
 }
 
-// Timer for enemy spawning
 #[derive(Resource)]
 struct EnemySpawnTimer(Timer);
 
-// Timer for projectile cooldown
 #[derive(Resource)]
 struct ProjectileCooldownTimer(Timer);
 
-// Timer for player movement
 #[derive(Resource)]
 struct PlayerMovementTimer(Timer);
 
-// Timer for enemy movement
 #[derive(Resource)]
 struct EnemyMovementTimer(Timer);
 
-// Offset for camera/view
 #[derive(Resource)]
 struct CameraOffset(IVec2);
 
@@ -143,68 +112,54 @@ struct GameState {
     pub sound_manager: SoundManager,
 }
 
-impl GameState {
-    pub fn new() -> Self {
-        Self {
-            ruleset: Ruleset::default(),
-            spawn_queue: Vec::new(),
-            store: Vec::new(),
-            sound_manager: SoundManager::new("../../assets/sfx/".into()).unwrap(), // todo: error handling
-        }
-    }
-
-    pub fn constrain() {
-
-    }
-
-    pub fn update() {
-
-    }
-}
-
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, TerminalPlugins))
         .add_systems(Startup, setup)
-        .add_systems(Update, (
-            player_movement, 
-            update_terminal,
-            spawn_enemies,
-            (enemy_ai, auto_cast, move_projectiles, check_collisions).chain(), // Chain these systems to run in order
-        ))
-        .insert_resource(EnemySpawnTimer(Timer::from_seconds(1.0, TimerMode::Repeating))) // Spawn enemies every 1 second
-        .insert_resource(ProjectileCooldownTimer(Timer::from_seconds(1.0, TimerMode::Once))) // Cooldown for projectiles
-        .insert_resource(PlayerMovementTimer(Timer::from_seconds(0.1, TimerMode::Repeating))) // Player moves every 100 milliseconds
-        .insert_resource(EnemyMovementTimer(Timer::from_seconds(0.5, TimerMode::Repeating))) // Enemies move every 500 milliseconds
-        .insert_resource(CameraOffset(IVec2::new(0, 0))) // Initial camera offset
+        .add_systems(
+            Update,
+            ((
+                player_movement,
+                spawn_enemies,
+                (enemy_ai, auto_cast, process_projectiles, process_collisions).chain(),
+                render_scene,
+            )
+                .chain(),),
+        )
+        .insert_resource(EnemySpawnTimer(Timer::from_seconds(
+            1.0,
+            TimerMode::Repeating,
+        ))) // spawn enemies every second
+        .insert_resource(ProjectileCooldownTimer(Timer::from_seconds(
+            1.0,
+            TimerMode::Once,
+        )))
+        .insert_resource(PlayerMovementTimer(Timer::from_seconds(
+            0.1,
+            TimerMode::Repeating,
+        )))
+        .insert_resource(EnemyMovementTimer(Timer::from_seconds(
+            0.5,
+            TimerMode::Repeating,
+        )))
+        .insert_resource(CameraOffset(IVec2::default()))
         .run();
 }
 
 fn setup(mut commands: Commands) {
-    let _state = GameState::new(); // Use _state to indicate it's intentionally unused
-    // state.sound_manager.play_sound("assets/sfx/45_Charge_05.wav".into(), -8.0).unwrap(); // Corrected path
-    
-    // Spawn the terminal
-    commands.spawn((
-        Terminal::new([80, 50]), // Create an 80x50 terminal
-        TerminalBorder::single_line(),
-    ));
-    
-    // Spawn player with Transform component for movement, centered
+    commands.spawn((Terminal::new([80, 50]), TerminalBorder::single_line()));
     commands.spawn((
         Player {
             health: 100.0,
             max_health: 100.0,
             speed: 1.0,
-            position: IVec2::new(40, 25), // Start at center of the terminal (80/2, 50/2)
+            position: IVec2::new(40, 25), // spawn the player in the center of our viewport
         },
-        Transform::default(), // Add Transform component directly
+        Transform::default(),
     ));
-
     commands.spawn(TerminalCamera::new());
 }
 
-// System to handle player movement
 fn player_movement(
     mut player_query: Query<&mut Player>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -213,44 +168,36 @@ fn player_movement(
     mut camera_offset: ResMut<CameraOffset>,
     terminal_query: Query<&Terminal>,
 ) {
-    // Tick the timer
     timer.0.tick(time.delta());
-    
-    // Check if it's time to move the player
-    if timer.0.finished() {
-        if let Ok(mut player) = player_query.single_mut() {
-            // Get the terminal size to determine the center
-            if let Ok(terminal) = terminal_query.single() {
-                let size = terminal.size();
-                let center_x = size[0] as i32 / 2;
-                let center_y = size[1] as i32 / 2;
-                
-                // Handle movement input (invert Y-axis for terminal coordinates)
-                let mut move_offset = IVec2::new(0, 0);
-                if keyboard_input.pressed(KeyCode::KeyW) {
-                    move_offset.y += 1; // Move up in terminal coordinates
-                }
-                if keyboard_input.pressed(KeyCode::KeyS) {
-                    move_offset.y -= 1; // Move down in terminal coordinates
-                }
-                if keyboard_input.pressed(KeyCode::KeyA) {
-                    move_offset.x -= 1;
-                }
-                if keyboard_input.pressed(KeyCode::KeyD) {
-                    move_offset.x += 1;
-                }
-                
-                // Update camera offset instead of player position
-                camera_offset.0 -= move_offset;
-                
-                // Keep the player's position at the center of the terminal
-                player.position = IVec2::new(center_x, center_y);
+    //if timer.0.finished() {
+    if let Ok(mut player) = player_query.single_mut() {
+        if let Ok(terminal) = terminal_query.single() {
+            let size = terminal.size();
+            let center_x = size[0] as i32 / 2;
+            let center_y = size[1] as i32 / 2;
+
+            let mut move_offset = IVec2::new(0, 0);
+            if keyboard_input.pressed(KeyCode::KeyW) {
+                move_offset.y += 1;
             }
+            if keyboard_input.pressed(KeyCode::KeyS) {
+                move_offset.y -= 1;
+            }
+            if keyboard_input.pressed(KeyCode::KeyA) {
+                move_offset.x -= 1;
+            }
+            if keyboard_input.pressed(KeyCode::KeyD) {
+                move_offset.x += 1;
+            }
+
+            // todo: this is kinda weird
+            camera_offset.0 -= move_offset;
+            player.position = IVec2::new(center_x, center_y);
         }
     }
+    //}
 }
 
-// System to spawn enemies from the edges of the map
 fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,
@@ -258,40 +205,31 @@ fn spawn_enemies(
     terminal_query: Query<&Terminal>,
     camera_offset: Res<CameraOffset>,
 ) {
-    if let Ok(terminal) = terminal_query.single() { // Use single instead of get_single
-        // Tick the timer
+    if let Ok(terminal) = terminal_query.single() {
         timer.0.tick(time.delta());
-
-        // Check if it's time to spawn a new enemy
         if timer.0.finished() {
-            // Get terminal size
             let size = terminal.size();
-            
-            // Generate a random position on the edge of the terminal
             let mut rng = rand::thread_rng();
+
+            // choose a random edge to spawn the enemy at
             let (x, y) = match rng.gen_range(0..4) {
-                // Top edge
+                // top edge
                 0 => (rng.gen_range(0..size[0] as i32), 0),
-                // Bottom edge
+                // bottom edge
                 1 => (rng.gen_range(0..size[0] as i32), size[1] as i32 - 1),
-                // Left edge
+                // left edge
                 2 => (0, rng.gen_range(0..size[1] as i32)),
-                // Right edge
+                // right edge
                 _ => (size[0] as i32 - 1, rng.gen_range(0..size[1] as i32)),
             };
-            
-            // Apply camera offset to the spawn position
+
+            // spawn the enemy offscreen
             let spawn_position = IVec2::new(x, y) + camera_offset.0;
-            
-            // Spawn the enemy
-            commands.spawn((
-                Enemy::new(spawn_position),
-            ));
+            commands.spawn((Enemy::new(spawn_position),));
         }
     }
 }
 
-// Basic enemy AI to move towards the player
 fn enemy_ai(
     mut enemy_query: Query<&mut Enemy>,
     player_query: Query<&Player>,
@@ -299,41 +237,38 @@ fn enemy_ai(
     mut timer: ResMut<EnemyMovementTimer>,
     camera_offset: Res<CameraOffset>,
 ) {
-    // Tick the timer
     timer.0.tick(time.delta());
-    
-    // Check if it's time to move the enemies
+
     if timer.0.finished() {
-        if let Ok(player) = player_query.single() { // Use single instead of get_single
-            // Collect all current enemy positions to check for collisions
-            let enemy_positions: Vec<IVec2> = enemy_query.iter().map(|enemy| enemy.position).collect();
-            
+        if let Ok(player) = player_query.single() {
+            let enemy_positions: Vec<IVec2> =
+                enemy_query.iter().map(|enemy| enemy.position).collect();
+
             for mut enemy in enemy_query.iter_mut() {
-                // Calculate direction towards the player
                 let direction = player.position - (enemy.position + camera_offset.0);
-                
-                // Move enemy towards the player (simple step)
+
+                // simple step towards the player
                 if direction.x != 0 || direction.y != 0 {
-                    let move_direction = direction.signum(); // Move one step in the direction of the player
-                    let new_position = enemy.position + move_direction;
-                    
-                    // Check if the new position is occupied by another enemy
+                    let move_direction = direction.signum();
+                    let wish_move = enemy.position + move_direction;
+
+                    // check if the desired position is occupied by another enemy
                     let mut is_occupied = false;
                     for &pos in &enemy_positions {
-                        if pos == new_position {
+                        if pos == wish_move {
                             is_occupied = true;
                             break;
                         }
                     }
-                    
-                    // Check if the new position is occupied by the player
-                    if player.position == new_position {
+
+                    // check if the desired position is occupied by the player
+                    if player.position == wish_move {
                         is_occupied = true;
                     }
-                    
-                    // If the new position is not occupied, move the enemy
+
+                    // if the desired position is not occupied, move the enemy
                     if !is_occupied {
-                        enemy.position = new_position;
+                        enemy.position = wish_move;
                     }
                 }
             }
@@ -341,59 +276,51 @@ fn enemy_ai(
     }
 }
 
-// System to automatically cast a projectile
 fn auto_cast(
     mut commands: Commands,
     player_query: Query<&Player>,
-    enemy_query: Query<(Entity, &Enemy)>, // Query for both Entity and Enemy component
+    enemy_query: Query<(Entity, &Enemy)>,
     time: Res<Time>,
     mut timer: ResMut<ProjectileCooldownTimer>,
     camera_offset: Res<CameraOffset>,
 ) {
-    // Tick the timer
     timer.0.tick(time.delta());
 
-    // Check if it's time to cast a new projectile and if the cooldown has finished
+    // is it time to fire a new projectile?
     if timer.0.finished() {
-        if let Ok(player) = player_query.single() { // Use single instead of get_single
-            // Find the nearest enemy
+        if let Ok(player) = player_query.single() {
             let mut nearest_enemy_entity: Option<Entity> = None;
-            let mut min_distance = f32::MAX;
-            
+            let mut min_distance = i32::MAX;
+
             for (enemy_entity, enemy) in enemy_query.iter() {
-                let distance = (enemy.position + camera_offset.0 - player.position).length_squared(); // Use squared distance for efficiency
-                if distance < min_distance as i32 { // Cast min_distance to i32 for comparison
-                    min_distance = distance as f32; // Cast to f32 to match min_distance type
+                let distance =
+                    (enemy.position + camera_offset.0 - player.position).length_squared();
+                if distance < min_distance {
+                    min_distance = min_distance;
                     nearest_enemy_entity = Some(enemy_entity);
                 }
             }
-            
-            // If there's a nearest enemy, cast a projectile towards it
+
+            // if we're targeting the nearest enemy, attack it
             if let Some(target_entity) = nearest_enemy_entity {
-                // Calculate the player's world position
-                let player_world_position = player.position - camera_offset.0;
-                
-                // Spawn multiple projectiles in a burst (e.g., 3 projectiles)
+                let player_position = player.position - camera_offset.0;
+
                 for _ in 0..3 {
-                    commands.spawn((
-                        Projectile {
-                            position: player_world_position, // Spawn at player's world position
-                            target: Some(target_entity), // Set the target
-                            damage: 25.0, // Base damage
-                            speed: 2.0, // Increase speed for a more visible effect
-                        },
-                    ));
+                    commands.spawn((Projectile {
+                        position: player_position,   // spawn at player origin
+                        target: Some(target_entity), // travel towards a target
+                        damage: 25.0,                // do some damage
+                        speed: 1.65,                 // travel slowly
+                    },));
                 }
-                
-                // Reset the cooldown timer
+
                 timer.0.reset();
             }
         }
     }
 }
 
-// System to move projectiles towards their target and despawn them if they go off-screen or the target is dead
-fn move_projectiles(
+fn process_projectiles(
     mut commands: Commands,
     mut projectile_query: Query<(Entity, &mut Projectile)>,
     enemy_query: Query<&Enemy>,
@@ -402,129 +329,131 @@ fn move_projectiles(
 ) {
     if let Ok(terminal) = terminal_query.single() {
         let terminal_size = terminal.size();
-        
+
         for (entity, mut projectile) in projectile_query.iter_mut() {
-            // Store the speed in a local variable to avoid borrowing issues
             let speed = projectile.speed;
-            
-            // Check if the target enemy still exists
             let mut target_exists = false;
+
+            // try to find a target
             if let Some(target_entity) = projectile.target {
                 if let Ok(target_enemy) = enemy_query.get(target_entity) {
+                    let direction = (target_enemy.position - projectile.position)
+                        .as_vec2()
+                        .normalize_or_zero();
+
                     target_exists = true;
-                    // Calculate direction towards the target in world space
-                    let direction = (target_enemy.position - projectile.position).as_vec2().normalize_or_zero();
-                    
-                    // Update projectile position based on its direction and speed in world space
-                    // Use a slower speed for a more visible effect
                     projectile.position += (direction * speed).as_ivec2();
                 }
             }
-            
-            // If the target is dead or there was no target, despawn the projectile
+
+            // ensure the projectile is despawned if the target is dead or there was no valid target
             if !target_exists {
                 commands.entity(entity).despawn();
             }
-            
-            // Check if projectile is off-screen relative to the camera
+
+            // check if projectile is off-screen relative to the camera
             let draw_position = projectile.position + camera_offset.0;
-            if draw_position.x < 0 || draw_position.x >= terminal_size[0] as i32 ||
-               draw_position.y < 0 || draw_position.y >= terminal_size[1] as i32 {
-                // Despawn the projectile
+            if draw_position.x < 0
+                || draw_position.x >= terminal_size[0] as i32
+                || draw_position.y < 0
+                || draw_position.y >= terminal_size[1] as i32
+            {
+                // despawn
                 commands.entity(entity).despawn();
             }
         }
     }
 }
 
-// System to check for collisions between projectiles and enemies
-fn check_collisions(
+fn process_collisions(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Projectile)>,
     mut enemy_query: Query<(Entity, &mut Enemy)>,
-    _camera_offset: Res<CameraOffset>, // Mark as unused
+    _camera_offset: Res<CameraOffset>, // todo.
 ) {
+    // todo: currently only checking projectiles against enemies
     for (projectile_entity, projectile) in projectile_query.iter() {
         for (enemy_entity, mut enemy) in enemy_query.iter_mut() {
-            // Check if projectile and enemy are at the exact same position in world space
             if projectile.position == enemy.position {
-                // Apply damage to the enemy
+                // take damage
                 enemy.health -= projectile.damage;
-                
-                // If enemy's health is depleted, despawn it
+
+                // if enemy's health pool is depleted, despawn it
                 if enemy.health <= 0.0 {
                     commands.entity(enemy_entity).despawn();
                 }
-                
-                // Despawn the projectile
+
                 commands.entity(projectile_entity).despawn();
             }
         }
     }
 }
 
-// System to update the terminal with game entities
-fn update_terminal(
+fn render_scene(
     player_query: Query<&Player>,
     enemy_query: Query<&Enemy>,
     projectile_query: Query<&Projectile>,
     mut terminal_query: Query<&mut Terminal>,
     camera_offset: Res<CameraOffset>,
 ) {
-    if let Ok(mut terminal) = terminal_query.single_mut() { // Use single_mut instead of get_single_mut
-        // Clear the terminal
+    if let Ok(mut terminal) = terminal_query.single_mut() {
         terminal.clear();
-        
-        // Draw player (Cyan) - Player is always at the center
-        if let Ok(player) = player_query.single() { // Use single instead of get_single
+
+        // draw player
+        if let Ok(player) = player_query.single() {
+            // note: the player is assumed to always be in the center of our viewpoint
             terminal.put_char([player.position.x, player.position.y], '@');
         }
-        
-        // Draw enemies (Red)
+
+        // draw enemies
         for enemy in enemy_query.iter() {
-            // Apply camera offset to enemy position for drawing
             let draw_position = enemy.position + camera_offset.0;
-            
-            // Boundary check for enemies
-            if draw_position.x >= 0 && draw_position.x < terminal.size()[0] as i32 &&
-               draw_position.y >= 0 && draw_position.y < terminal.size()[1] as i32 {
+
+            // ensure entity is within our viewport before drawing it
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
                 terminal.put_char([draw_position.x, draw_position.y], 'd');
             }
         }
-        
-        // Draw projectiles (Yellow)
+
+        // draw projectiles
         for projectile in projectile_query.iter() {
-            // Apply camera offset to projectile position for drawing
             let draw_position = projectile.position + camera_offset.0;
-            
-            // Boundary check for projectiles
-            if draw_position.x >= 0 && draw_position.x < terminal.size()[0] as i32 &&
-               draw_position.y >= 0 && draw_position.y < terminal.size()[1] as i32 {
+
+            // ensure projectile is within our viewport before drawing it
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
                 terminal.put_char([draw_position.x, draw_position.y], '*');
             }
         }
-        
-        // Draw player health bar (Green)
-        if let Ok(player) = player_query.single() { // Use single instead of get_single
+
+        // draw player info(hp bar, etc)
+        if let Ok(player) = player_query.single() {
             let health_ratio = player.health / player.max_health;
-            let bar_length = 20; // Length of the health bar
+            let bar_length = 20;
             let filled_length = (health_ratio * bar_length as f32) as usize;
-            
-            // Create the health bar string
-            let mut health_bar = String::from("[HP: ");
+
+            let healthbar_base = String::from("HP:");
+            let mut healthbar_content = String::new();
             for i in 0..bar_length {
                 if i < filled_length {
-                    health_bar.push('#');
+                    healthbar_content.push('#');
                 } else {
-                    health_bar.push('-');
+                    healthbar_content.push('-');
                 }
             }
-            health_bar.push(']');
-            
-            // Draw the health bar at a fixed position (e.g., top-left corner)
-            // Make sure the health bar fits within the terminal
-            if bar_length + 6 <= terminal.size()[0] as usize { // +6 for "[HP: " and "]"
-                terminal.put_string([0, 0], health_bar);
+
+            let mut healthbar_ts = TerminalString::from(healthbar_content);
+            healthbar_ts.decoration.fg_color = Some(Color::linear_rgb(0.0, 1.0, 0.0).into());
+
+            // position the healthbar in the top-left corner, ensuring it fits
+            if bar_length + 6 <= terminal.size()[0] as usize {
+                terminal.put_string([0, 0], healthbar_base);
+                terminal.put_string([4, 0], healthbar_ts);
             }
         }
     }
