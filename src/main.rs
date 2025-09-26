@@ -1,5 +1,6 @@
 mod resources;
 mod systems;
+use bevy::input::gamepad::GamepadInput;
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 use rand::*;
@@ -104,11 +105,11 @@ fn main() {
                 .chain(),),
         )
         .insert_resource(EnemySpawnTimer(Timer::from_seconds(
-            1.0,
+            0.45,
             TimerMode::Repeating,
-        ))) // spawn enemies every second
+        )))
         .insert_resource(ProjectileCooldownTimer(Timer::from_seconds(
-            1.65,
+            2.5,
             TimerMode::Once,
         )))
         .insert_resource(PlayerMovementTimer(Timer::from_seconds(
@@ -116,7 +117,7 @@ fn main() {
             TimerMode::Repeating,
         )))
         .insert_resource(EnemyMovementTimer(Timer::from_seconds(
-            0.5,
+            0.3,
             TimerMode::Repeating,
         )))
         .insert_resource(CameraOffset(IVec2::default()))
@@ -136,7 +137,6 @@ fn setup(mut commands: Commands) {
         Transform::default(),
     ));
     commands.spawn(TerminalCamera::new());
-
 }
 
 fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
@@ -148,6 +148,7 @@ fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
 
 fn player_movement(
     mut player_query: Query<&mut Player>,
+    gamepad_input: Query<(Entity, &Gamepad)>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     mut timer: ResMut<PlayerMovementTimer>,
@@ -163,6 +164,24 @@ fn player_movement(
             let center_y = size[1] as i32 / 2;
 
             let mut move_offset = IVec2::new(0, 0);
+            for (_, gamepad) in &gamepad_input {
+                let left_stick = gamepad.left_stick();
+
+                print!("Left Stick: x: {}, y: {}\r", left_stick.x, left_stick.y);
+                print!("Left Stick abs: x: {}, y: {}\r", left_stick.x.abs(), left_stick.y.abs());
+
+                const TOLERANCE: f32 = 0.35f32;
+                if left_stick.y < -TOLERANCE {
+                    move_offset.y -= 1;
+                } else if left_stick.y > TOLERANCE {
+                    move_offset.y += 1;
+                } else if left_stick.x < -TOLERANCE {
+                    move_offset.x -= 1;
+                } else if left_stick.x > TOLERANCE {
+                    move_offset.x += 1;
+                }
+            }
+
             if keyboard_input.pressed(KeyCode::KeyW) {
                 move_offset.y += 1;
             }
@@ -175,9 +194,8 @@ fn player_movement(
             if keyboard_input.pressed(KeyCode::KeyD) {
                 move_offset.x += 1;
             }
-
             // todo: this is kinda weird
-            camera_offset.0 -= move_offset;
+            camera_offset.0 -= move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
             player.position = IVec2::new(center_x, center_y);
         }
     }
@@ -301,7 +319,9 @@ fn auto_cast(
                     },));
                 }
 
-                sound_manager.play_sound("./assets/sfx/25_Wind_01.wav".into(), -30.0).ok();
+                sound_manager
+                    .play_sound("./assets/sfx/25_Wind_01.wav".into(), -30.0)
+                    .ok();
                 timer.0.reset();
             }
         }
