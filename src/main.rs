@@ -92,7 +92,7 @@ struct GameState {
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, TerminalPlugins))
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, list_gamepads).chain())
         .add_systems(
             Update,
             ((
@@ -130,12 +130,20 @@ fn setup(mut commands: Commands) {
         Player {
             health: 100.0,
             max_health: 100.0,
-            speed: 1.0,
+            speed: 0.5,
             position: IVec2::new(40, 25), // spawn the player in the center of our viewport
         },
         Transform::default(),
     ));
     commands.spawn(TerminalCamera::new());
+
+}
+
+fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
+    println!("Looking for gamepads...");
+    for (name, gamepad) in &gamepads {
+        println!("Found gamepad: {name}");
+    }
 }
 
 fn player_movement(
