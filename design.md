@@ -12,7 +12,7 @@ This document aims to outline aspects of the game's features.
 * Unique, subtle, and informative use of colors and glyphs. Including an in-game key.
 
 ## sound
-*todo*.
+*See [#1](https://github.com/proficiency/ascii_survivors/issues/1)*
 
 ## code
 * Efficient use of Bevy's ECS
