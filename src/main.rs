@@ -1,6 +1,7 @@
 mod sound;
 mod systems;
 use crate::sound::*;
+use crate::systems::cleanup::*;
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 use rand::*;
@@ -124,6 +125,7 @@ fn main() {
                 spawn_enemies,
                 (enemy_ai, auto_cast, process_projectiles, process_collisions).chain(),
                 systems::render::draw_scene,
+                despawn_entities,
             )
                 .chain(),),
         )
@@ -349,7 +351,7 @@ fn process_projectiles(
 
             // ensure the projectile is despawned if the target is dead or there was no valid target
             if !target_exists {
-                commands.entity(entity).despawn();
+                commands.entity(entity).insert(Despawn);
             }
 
             // check if projectile is off-screen relative to the camera
@@ -360,7 +362,7 @@ fn process_projectiles(
                 || draw_position.y >= terminal_size[1] as i32
             {
                 // despawn
-                commands.entity(entity).despawn();
+                commands.entity(entity).insert(Despawn);
             }
         }
     }
@@ -373,28 +375,19 @@ fn process_collisions(
     _camera_offset: Res<CameraOffset>, // todo.
 ) {
     // todo: currently only checking projectiles against enemies
-    let mut despawned_entities: Vec<Entity> = Vec::new();
-
     for (projectile_entity, projectile) in projectile_query.iter() {
         for (enemy_entity, mut enemy) in enemy_query.iter_mut() {
             if projectile.position == enemy.position {
                 // take damage
                 enemy.health -= projectile.damage;
 
-                // if enemy's health pool is depleted, despawn it
-                if enemy.health <= 0.0 && !despawned_entities.contains(&enemy_entity) {
-                    if commands.get_entity(enemy_entity).is_ok() {
-                        commands.entity(enemy_entity).despawn();
-                        despawned_entities.push(enemy_entity);
-                    }
+                // if enemy's health pool is depleted, mark it for despawn
+                if enemy.health <= 0.0 {
+                    commands.entity(enemy_entity).insert(Despawn);
                 }
 
-                if commands.get_entity(projectile_entity).is_ok()
-                    && !despawned_entities.contains(&projectile_entity)
-                {
-                    commands.entity(projectile_entity).despawn();
-                    despawned_entities.push(projectile_entity);
-                }
+                // mark projectile for despawn
+                commands.entity(projectile_entity).insert(Despawn);
             }
         }
     }
