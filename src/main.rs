@@ -1,34 +1,12 @@
-mod sound;
+mod resources;
 mod systems;
 use crate::sound::*;
 use crate::systems::cleanup::*;
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 use rand::*;
-
-/*trait Upgrade {
-    fn name(&self) -> &str;
-    fn description(&self) -> &str;
-    fn apply(&self, ruleset: &mut Ruleset);
-}
-
-#[derive(Debug)]
-struct SpellUpgrade {}
-
-impl Upgrade for SpellUpgrade {
-    fn name(&self) -> &str {
-        "Spell Upgrade"
-    }
-
-    fn description(&self) -> &str {
-        "Makes dat fireball supa hot. Mega effective"
-    }
-
-    fn apply(&self, ruleset: &mut Ruleset) {
-        // todo: eventually take a Spell struct and modify it, constrain based on the upgrade type
-        ruleset.player_damage_modifier *= 1.2;
-    }
-}*/
+use resources::sound::SoundManager;
+use std::path::*;
 
 #[derive(Resource, Debug, Default)]
 struct Ruleset {
@@ -86,7 +64,6 @@ impl Enemy {
 #[derive(Component)]
 struct Projectile {
     position: IVec2,
-    // direction: IVec2,
     target: Option<Entity>,
     damage: f32,
     speed: f32,
@@ -117,7 +94,7 @@ struct GameState {
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, TerminalPlugins))
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, list_gamepads).chain())
         .add_systems(
             Update,
             ((
@@ -134,7 +111,7 @@ fn main() {
             TimerMode::Repeating,
         ))) // spawn enemies every second
         .insert_resource(ProjectileCooldownTimer(Timer::from_seconds(
-            1.0,
+            1.65,
             TimerMode::Once,
         )))
         .insert_resource(PlayerMovementTimer(Timer::from_seconds(
@@ -146,6 +123,7 @@ fn main() {
             TimerMode::Repeating,
         )))
         .insert_resource(CameraOffset(IVec2::default()))
+        .insert_resource(SoundManager::new(PathBuf::from("./assets/sfx/")).unwrap())
         .run();
 }
 
@@ -155,12 +133,20 @@ fn setup(mut commands: Commands) {
         Player {
             health: 100.0,
             max_health: 100.0,
-            speed: 1.0,
+            speed: 0.5,
             position: IVec2::new(40, 25), // spawn the player in the center of our viewport
         },
         Transform::default(),
     ));
     commands.spawn(TerminalCamera::new());
+
+}
+
+fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
+    println!("Looking for gamepads...");
+    for (name, gamepad) in &gamepads {
+        println!("Found gamepad: {name}");
+    }
 }
 
 fn player_movement(
@@ -285,6 +271,7 @@ fn auto_cast(
     enemy_query: Query<(Entity, &Enemy)>,
     time: Res<Time>,
     mut timer: ResMut<ProjectileCooldownTimer>,
+    mut sound_manager: ResMut<SoundManager>,
     camera_offset: Res<CameraOffset>,
 ) {
     timer.0.tick(time.delta());
@@ -317,6 +304,7 @@ fn auto_cast(
                     },));
                 }
 
+                sound_manager.play_sound("./assets/sfx/25_Wind_01.wav".into(), -30.0).ok();
                 timer.0.reset();
             }
         }
