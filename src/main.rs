@@ -372,6 +372,8 @@ fn process_collisions(
     _camera_offset: Res<CameraOffset>, // todo.
 ) {
     // todo: currently only checking projectiles against enemies
+    let mut despawned_entities: Vec<Entity> = Vec::new();
+
     for (projectile_entity, projectile) in projectile_query.iter() {
         for (enemy_entity, mut enemy) in enemy_query.iter_mut() {
             if projectile.position == enemy.position {
@@ -379,11 +381,19 @@ fn process_collisions(
                 enemy.health -= projectile.damage;
 
                 // if enemy's health pool is depleted, despawn it
-                if enemy.health <= 0.0 {
-                    commands.entity(enemy_entity).despawn();
+                if enemy.health <= 0.0 && !despawned_entities.contains(&enemy_entity) {
+                    if commands.get_entity(enemy_entity).is_ok() {
+                        commands.entity(enemy_entity).despawn();
+                        despawned_entities.push(enemy_entity);
+                    }
                 }
 
-                commands.entity(projectile_entity).despawn();
+                if commands.get_entity(projectile_entity).is_ok()
+                    && !despawned_entities.contains(&projectile_entity)
+                {
+                    commands.entity(projectile_entity).despawn();
+                    despawned_entities.push(projectile_entity);
+                }
             }
         }
     }
