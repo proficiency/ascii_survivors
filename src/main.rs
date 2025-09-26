@@ -296,7 +296,7 @@ fn auto_cast(
                 let distance =
                     (enemy.position + camera_offset.0 - player.position).length_squared();
                 if distance < min_distance {
-                    min_distance = min_distance;
+                    min_distance = distance;
                     nearest_enemy_entity = Some(enemy_entity);
                 }
             }
