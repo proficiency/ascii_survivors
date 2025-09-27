@@ -1,7 +1,14 @@
-use crate::{CameraOffset, Enemy, Player, Projectile};
+use crate::{CameraOffset, Enemy, Orb, Player, Projectile};
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;
+
+fn world_to_screen(world_position: IVec2, terminal_size: UVec2) -> IVec2 {
+    IVec2::new(
+        world_position.x,
+        terminal_size[1] as i32 - 1 - world_position.y,
+    )
+}
 
 pub fn draw_resource_bar(
     mut terminal_query: &mut Query<&mut Terminal>, // a query to the terminal resource
@@ -42,42 +49,67 @@ pub fn draw_scene(
     player_query: Query<&Player>,
     enemy_query: Query<&Enemy>,
     projectile_query: Query<&Projectile>,
+    orb_query: Query<&Orb>,
     mut terminal_query: Query<&mut Terminal>,
     camera_offset: Res<CameraOffset>,
 ) {
     if let Ok(mut terminal) = terminal_query.single_mut() {
         terminal.clear();
 
-        // draw player
-        if let Ok(player) = player_query.single() {
-            // note: the player is assumed to always be in the center of our viewpoint
-            terminal.put_char([player.position.x, player.position.y], '@');
-        }
+        let terminal_size = terminal.size();
 
-        // draw enemies
-        for enemy in enemy_query.iter() {
-            let draw_position = enemy.position + camera_offset.0;
+        // draw orbs
+        for orb in orb_query.iter() {
+            let world_position = orb.position + camera_offset.0;
+            let draw_position = world_to_screen(world_position, terminal_size);
 
-            // ensure entity is within our viewport before drawing it
             if terminal
                 .size()
                 .contains_point([draw_position.x, draw_position.y])
             {
-                terminal.put_char([draw_position.x, draw_position.y], 'd');
+                let mut orb_char = TerminalString::from("o");
+                orb_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgba(0.8, 0.2, 0.8, 1.0)));
+                terminal.put_string([draw_position.x, draw_position.y], orb_char);
+            }
+        }
+
+        // draw enemies
+        for enemy in enemy_query.iter() {
+            let world_position = enemy.position + camera_offset.0;
+            let draw_position = world_to_screen(world_position, terminal_size);
+
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
+                let mut enemy_char = TerminalString::from("d");
+                enemy_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
+                terminal.put_string([draw_position.x, draw_position.y], enemy_char);
             }
         }
 
         // draw projectiles
         for projectile in projectile_query.iter() {
-            let draw_position = projectile.position + camera_offset.0;
-
+            let world_position = projectile.position + camera_offset.0;
+            let draw_position = world_to_screen(world_position, terminal_size);
+            
             // ensure projectile is within our viewport before drawing it
             if terminal
                 .size()
                 .contains_point([draw_position.x, draw_position.y])
             {
-                terminal.put_char([draw_position.x, draw_position.y], '*');
+                let mut projectile_char = TerminalString::from("*");
+                projectile_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgba(1.0, 0.7, 0.0, 1.0)));
+                terminal.put_string([draw_position.x, draw_position.y], projectile_char);
             }
+        }
+
+        // draw player
+        if let Ok(player) = player_query.single() {
+            // note: the player is assumed to always be in the center of our viewpoint
+            let mut player_position = TerminalString::from("@");
+            player_position.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
+            terminal.put_string([player.position.x, player.position.y], player_position);
         }
 
         // draw player info(hp bar, xp, etc)

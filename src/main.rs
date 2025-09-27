@@ -69,6 +69,11 @@ struct Projectile {
     speed: f32,
 }
 
+#[derive(Component)]
+struct Orb {
+    position: IVec2,
+}
+
 #[derive(Resource)]
 struct EnemySpawnTimer(Timer);
 
@@ -423,6 +428,10 @@ fn process_collisions(
 
                 // if enemy's health pool is depleted, mark it for despawn
                 if enemy.health <= 0.0 {
+                    // spawn an orb at the enemy's position before despawning
+                    commands.spawn(Orb {
+                        position: enemy.position,
+                    });
                     commands.entity(enemy_entity).insert(Despawn);
                 }
 
