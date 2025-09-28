@@ -11,7 +11,7 @@ env:
   CARGO_TERM_COLOR: always
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -83,14 +83,10 @@ jobs:
 
     - name: Package artifacts
       run: |
-        mkdir -p release
-        cp target/release/souls release/
-        cp -r assets release/
-        cd release
-        zip -r souls-${{ github.ref_name }}.zip souls assets
+        zip -r souls-${{ github.ref_name }}.zip assets
+        zip -uj souls-${{ github.ref_name }}.zip target/release/souls
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
       with:
-        name: souls-${{ github.ref_name }}
-        path: release/souls-${{ github.ref_name }}.zip
+        files: souls-${{ github.ref_name }}.zip
