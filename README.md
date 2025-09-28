@@ -1,17 +1,21 @@
-## ascii_survivors
-infinitely scaling survivors game
+# ascii_survivors
+_todo._
 
 ## About
-*  written in Rust using [Bevy](https://bevy.org/)
-* roguelike mechanics with survivors-like gameplay
-* 'roguelite' features like persistent upgrades and revives
-* unique ASCII graphics
-* classic medieval fantasy theme
+roguelike game with a classic medieval fantasy theme — written in Rust with [Bevy](https://bevy.org/)
 
-### see also
-* [design](https://github.com/proficiency/ascii_survivors/blob/main/design.md)
+### Features:
+* 'roguelike' mechanics with survivors-like gameplay
+* 'roguelite' aspects; persistent upgrades, revives, and ruleset changes
+* unique, meaningful, but subtle ASCII graphics
+* classic medieval rpg/adventure game themes
+* gamepad support
+* music and sound effects
+
+### 📜 See also
+* [design document](https://github.com/proficiency/ascii_survivors/blob/main/design.md)
 * [issues](https://github.com/proficiency/ascii_survivors/issues)
 * [fibonacci development guidelines](https://github.com/proficiency/ascii_survivors/blob/main/design.md)
 
 > [!NOTE]
-> work in progress
+> **work in progress**
