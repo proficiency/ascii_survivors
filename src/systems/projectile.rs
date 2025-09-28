@@ -1,109 +1,24 @@
-mod resources;
-mod systems;
-
-use crate::systems::cleanup::*;
-use crate::systems::orbs::*;
-use crate::systems::player::*;
-use crate::systems::enemy::*;
-use crate::systems::projectile::*;
-
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
-use rand::*;
-use resources::sound::SoundManager;
-use std::path::*;
+use crate::systems::player::Player;
+use crate::systems::enemy::Enemy;
+use crate::systems::orbs::Orb;
+use crate::systems::cleanup::Despawn;
+use crate::resources::sound::SoundManager;
+use crate::CameraOffset; // Import CameraOffset from main.rs
 
-#[derive(Resource, Debug, Default)]
-struct Ruleset {
-    pub enemy_health_modifier: f32,
-    pub enemy_damage_modifier: f32,
-    pub enemy_spawn_rate: f32,
-    pub player_health_modifier: f32,
-    pub player_damage_modifier: f32,
-    pub player_speed_modifier: f32,
-
-    pub enemies_slow_on_attack: bool,
-    pub enemies_stun_on_attack: bool,
-}
-
-impl Ruleset {
-    pub fn default() -> Self {
-        Self {
-            enemy_health_modifier: 1.0,
-            enemy_damage_modifier: 1.0,
-            enemy_spawn_rate: 1.0,
-            player_health_modifier: 1.0,
-            player_damage_modifier: 1.0,
-            player_speed_modifier: 1.0,
-            enemies_slow_on_attack: false,
-            enemies_stun_on_attack: false,
-        }
-    }
+#[derive(Component)]
+pub struct Projectile {
+    pub position: IVec2,
+    pub target: Option<Entity>,
+    pub damage: f32,
+    pub speed: f32,
 }
 
 #[derive(Resource)]
-pub struct CameraOffset(pub IVec2);
+pub struct ProjectileCooldownTimer(pub Timer);
 
-struct GameState {
-    pub ruleset: Ruleset,
-    pub spawn_queue: Vec<i32>,
-    pub store: Vec<i32>,
-    pub sound_manager: SoundManager,
-}
-
-fn main() {
-    App::new()
-        .add_plugins((DefaultPlugins, TerminalPlugins))
-        .add_systems(Startup, (setup, list_gamepads).chain())
-        .add_systems(
-            Update,
-            ((
-                player_movement,
-                spawn_enemies,
-                (enemy_ai, auto_cast, process_projectiles, process_collisions, orb_movement, process_orb_collection).chain(),
-                systems::render::draw_scene,
-                despawn_entities,
-            )
-                .chain(),),
-        )
-        .insert_resource(EnemySpawnTimer(Timer::from_seconds(
-            1.25,
-            TimerMode::Repeating,
-        )))
-        .insert_resource(ProjectileCooldownTimer(Timer::from_seconds(
-            2.0,
-            TimerMode::Once,
-        )))
-        .insert_resource(PlayerMovementTimer(Timer::from_seconds(
-            0.1,
-            TimerMode::Repeating,
-        )))
-        .insert_resource(EnemyMovementTimer(Timer::from_seconds(
-            0.35,
-            TimerMode::Repeating,
-        )))
-        .insert_resource(CameraOffset(IVec2::default()))
-        .insert_resource(SoundManager::new(PathBuf::from("./assets/sfx/")).unwrap())
-        .run();
-}
-
-fn setup(mut commands: Commands) {
-    commands.spawn((Terminal::new([80, 50]), TerminalBorder::single_line()));
-    commands.spawn((
-        Player::new(IVec2::new(40, 25)),
-        Transform::default(),
-    ));
-    commands.spawn(TerminalCamera::new());
-}
-
-fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
-    println!("Looking for gamepads...");
-    for (name, gamepad) in &gamepads {
-        println!("Found gamepad: {name}");
-    }
-}
-
-fn auto_cast(
+pub fn auto_cast(
     mut commands: Commands,
     player_query: Query<&Player>,
     enemy_query: Query<(Entity, &Enemy)>,
@@ -114,6 +29,7 @@ fn auto_cast(
 ) {
     timer.0.tick(time.delta());
 
+    // is it time to fire a new projectile?
     if timer.0.finished() {
         if let Ok(player) = player_query.single() {
             let mut nearest_enemy_entity: Option<Entity> = None;
@@ -150,7 +66,7 @@ fn auto_cast(
     }
 }
 
-fn process_projectiles(
+pub fn process_projectiles(
     mut commands: Commands,
     mut projectile_query: Query<(Entity, &mut Projectile)>,
     enemy_query: Query<&Enemy>,
@@ -195,7 +111,7 @@ fn process_projectiles(
     }
 }
 
-fn process_collisions(
+pub fn process_collisions(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Projectile)>,
     mut enemy_query: Query<(Entity, &mut Enemy)>,

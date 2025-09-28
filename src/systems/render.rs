@@ -21,8 +21,12 @@ pub fn draw_resource_bar(
     bar_x_position: usize,                         // placeholder: x position of the bar (not used in future implementation)
 ) {
     if let Ok(mut terminal) = terminal_query.single_mut() {
-        let resource_ratio = current_value / max_value;
-        let filled_length = (resource_ratio as f32 * bar_length as f32) as usize;
+        let resource_ratio = if max_value > 0 {
+            current_value as f32 / max_value as f32
+        } else {
+            0.0
+        };
+        let filled_length = (resource_ratio * bar_length as f32) as usize;
 
         let mut bar_content = String::new();
         for i in 0..bar_length {
@@ -113,8 +117,18 @@ pub fn draw_scene(
         }
 
         // draw player info(hp bar, xp, etc)
-        let player_query = player_query.single().unwrap();
-        draw_resource_bar(&mut terminal_query, "HP", '#', 20, player_query.health as usize, player_query.max_health as usize, Color::linear_rgba(0.0, 1.0, 0.1, 1.0), 0);
-        draw_resource_bar(&mut terminal_query, "XP", '#', 20, 30, 100, Color::linear_rgba(0.1, 0.25, 1.0, 1.0), 30);
+        if let Ok(player) = player_query.single() {
+            draw_resource_bar(&mut terminal_query, "HP", '#', 20, player.health as usize, player.max_health as usize, Color::linear_rgba(0.0, 1.0, 0.1, 1.0), 0);
+            draw_resource_bar(
+                &mut terminal_query, 
+                &format!("XP (Lvl {})", player.level), 
+                '#', 
+                20, 
+                player.experience as usize, 
+                player.experience_to_next_level as usize, 
+                Color::linear_rgba(0.1, 0.25, 1.0, 1.0), 
+                30
+            );
+        }
     }
 }
