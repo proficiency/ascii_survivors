@@ -20,8 +20,8 @@ This document aims to outline aspects of the game's features.
 * Unique, subtle, and informative use of colors and glyphs. Including an in-game legend/key.
 * Pleasing, simple, intuitive UI/UX
 
-## sound
-*See [#1](https://github.com/proficiency/ascii_survivors/issues/1)*
+## [sound](https://github.com/proficiency/ascii_survivors/issues/1)
+Pleasing, cozy, fantasy sound effects and music
 
 ## code
 * Efficient use of Bevy's ECS
