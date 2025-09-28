@@ -9,9 +9,9 @@ infinitely scaling survivors game
 * classic medieval fantasy theme
 
 ### see also
-* _[design](https://github.com/proficiency/ascii_survivors/blob/main/design.md)_
-* _[issues](https://github.com/proficiency/ascii_survivors/issues)_
-* _[fibonacci development guidelines](https://github.com/proficiency/ascii_survivors/blob/main/design.md)_
+* [design](https://github.com/proficiency/ascii_survivors/blob/main/design.md)
+* [issues](https://github.com/proficiency/ascii_survivors/issues)
+* [fibonacci development guidelines](https://github.com/proficiency/ascii_survivors/blob/main/design.md)
 
 > [!NOTE]
 > work in progress
