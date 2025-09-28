@@ -20,10 +20,7 @@ pub struct ResourceBarConfig<'a> {
     pub bar_x_position: usize,
 }
 
-pub fn draw_resource_bar(
-    terminal_query: &mut Query<&mut Terminal>,
-    config: ResourceBarConfig,
-) {
+pub fn draw_resource_bar(terminal_query: &mut Query<&mut Terminal>, config: ResourceBarConfig) {
     if let Ok(mut terminal) = terminal_query.single_mut() {
         let resource_ratio = if config.max_value > 0 {
             config.current_value as f32 / config.max_value as f32
