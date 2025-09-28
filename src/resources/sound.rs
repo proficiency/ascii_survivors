@@ -52,7 +52,7 @@ impl SoundManager {
     pub fn play_theme(&mut self, volume: f32) -> Result<StaticSoundHandle> {
         let sound = self
             .sounds
-            .get("harmony.ogg")
+            .get("./assets/sfx/harmony.ogg")
             .ok_or_else(|| anyhow::anyhow!("theme not found"))?
             .volume(Decibels(volume));
 

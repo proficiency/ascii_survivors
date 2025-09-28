@@ -91,7 +91,7 @@ struct CameraOffset(IVec2);
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, TerminalPlugins))
-        .add_systems(Startup, (setup, list_gamepads).chain())
+        .add_systems(Startup, (setup, list_gamepads, play_theme).chain())
         .add_systems(
             Update,
             ((
@@ -267,14 +267,16 @@ fn enemy_ai(
                 let mut separation_force = Vec2::ZERO;
                 const SEPARATION_RADIUS: f32 = 2.0;
                 const SEPARATION_STRENGTH: f32 = 1.0;
-                
+
                 for &other_pos in &enemy_positions {
                     if other_pos != enemy.position {
                         let distance_vec = (enemy.position - other_pos).as_vec2();
                         let distance = distance_vec.length();
-                        
+
                         if distance < SEPARATION_RADIUS && distance > 0.0 {
-                            let repulsion_strength = SEPARATION_STRENGTH * (SEPARATION_RADIUS - distance) / SEPARATION_RADIUS;
+                            let repulsion_strength = SEPARATION_STRENGTH
+                                * (SEPARATION_RADIUS - distance)
+                                / SEPARATION_RADIUS;
                             separation_force += distance_vec.normalize() * repulsion_strength;
                         }
                     }
@@ -284,10 +286,22 @@ fn enemy_ai(
                 if combined_force.length() > 0.1 {
                     let normalized_direction = combined_force.normalize();
                     let move_direction = IVec2::new(
-                        if normalized_direction.x > 0.3 { 1 } else if normalized_direction.x < -0.3 { -1 } else { 0 },
-                        if normalized_direction.y > 0.3 { 1 } else if normalized_direction.y < -0.3 { -1 } else { 0 }
+                        if normalized_direction.x > 0.3 {
+                            1
+                        } else if normalized_direction.x < -0.3 {
+                            -1
+                        } else {
+                            0
+                        },
+                        if normalized_direction.y > 0.3 {
+                            1
+                        } else if normalized_direction.y < -0.3 {
+                            -1
+                        } else {
+                            0
+                        },
                     );
-                    
+
                     if move_direction != IVec2::ZERO {
                         let wish_move = enemy.position + move_direction;
 
@@ -424,11 +438,12 @@ fn process_collisions(
 
                 // if enemy's health pool is depleted, mark it for despawn
                 if enemy.health <= 0.0 {
-                    // spawn an orb at the enemy's position before despawning
+                    commands.entity(enemy_entity).insert(Despawn);
+
+                    // spawn an orb at the enemy's position as it despawns
                     commands.spawn(Orb {
                         position: enemy.position,
                     });
-                    commands.entity(enemy_entity).insert(Despawn);
                 }
 
                 // mark projectile for despawn
