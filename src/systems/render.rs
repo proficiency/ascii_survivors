@@ -122,26 +122,26 @@ pub fn draw_scene(
 
         // draw player info(hp bar, xp, etc)
         if let Ok(player) = player_query.single() {
-        draw_resource_bar(
-            &mut terminal_query,
-            "HP",
-            '#',
-            20,
-            player.health as usize,
-            player.max_health as usize,
-            Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
-            0,
-        );
-        draw_resource_bar(
-            &mut terminal_query,
-            &format!("XP (Lvl {})", player.level),
-            '#',
-            20,
-            player.experience as usize,
-            player.experience_to_next_level as usize,
-            Color::linear_rgba(0.1, 0.25, 1.0, 1.0),
-            30,
-        );
+            draw_resource_bar(
+                &mut terminal_query,
+                "HP",
+                '#',
+                20,
+                player.health as usize,
+                player.max_health as usize,
+                Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
+                0,
+            );
+            draw_resource_bar(
+                &mut terminal_query,
+                &format!("XP (Lvl {})", player.level),
+                '#',
+                20,
+                player.experience as usize,
+                player.experience_to_next_level as usize,
+                Color::linear_rgba(0.1, 0.25, 1.0, 1.0),
+                30,
+            );
         }
     }
 }

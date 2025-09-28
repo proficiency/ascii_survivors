@@ -10,18 +10,23 @@ use crate::systems::cleanup::*;
 
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
-use resources::sound::SoundManager;
-use std::path::*;
 use resources::camera::CameraOffset;
-use resources::timers::{EnemySpawnTimer, ProjectileCooldownTimer, PlayerMovementTimer, EnemyMovementTimer};
-use systems::player_movement::player_movement;
-use systems::enemy_spawn::spawn_enemies;
+use resources::sound::SoundManager;
+use resources::timers::{
+    EnemyMovementTimer, EnemySpawnTimer, PlayerMovementTimer, ProjectileCooldownTimer,
+};
+use std::path::*;
 use systems::enemy_ai::enemy_ai;
+use systems::enemy_spawn::spawn_enemies;
+use systems::player_movement::player_movement;
 
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, TerminalPlugins))
-        .add_systems(Startup, (setup, setup_resources, list_gamepads, play_theme).chain())
+        .add_systems(
+            Startup,
+            (setup, setup_resources, list_gamepads, play_theme).chain(),
+        )
         .add_systems(
             Update,
             ((

@@ -36,10 +36,10 @@ impl SoundManager {
                 StaticSoundData::from_file(file_path.clone()).map_err(|e| anyhow::anyhow!(e))?,
             );
 
-                sounds.insert(
-                    file_path.clone().to_string().to_string(),
-                    StaticSoundData::from_file(&file_path).map_err(|e| anyhow::anyhow!(e))?,
-                );
+            sounds.insert(
+                file_path.clone().to_string().to_string(),
+                StaticSoundData::from_file(&file_path).map_err(|e| anyhow::anyhow!(e))?,
+            );
 
             sounds.insert(
                 file_path.to_string(),
