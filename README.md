@@ -1,5 +1,5 @@
 # ascii_survivors
-_todo._
+_Survive, but in ASCII!_
 
 ## About
 roguelike game with a classic medieval fantasy theme — written in Rust with [Bevy](https://bevy.org/)
