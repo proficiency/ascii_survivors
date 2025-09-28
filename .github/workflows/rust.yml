@@ -106,7 +106,7 @@ jobs:
       run: |
         for dir in artifacts/*/; do
           dir_name=$(basename "$dir")
-          zip -r "artifacts/$dir_name.zip" "$dir"
+          (cd "$dir" && zip -r "../$dir_name.zip" .)
         done
     - name: Create Release
       uses: softprops/action-gh-release@v1
