@@ -83,20 +83,11 @@ jobs:
         cp -r assets staging/
     - name: Copy binary to staging directory
       run: cp ${{ env.BINARY_PATH }} staging/
-    - name: Zip staging directory (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        cd staging
-        zip -r ../souls-${{ env.LOWERCASE_OS }}.zip .
-    - name: Zip staging directory (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: Compress-Archive -Path staging/* -DestinationPath souls-${{ env.LOWERCASE_OS }}.zip
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: souls-${{ env.LOWERCASE_OS }}
-        path: souls-${{ env.LOWERCASE_OS }}.zip
+        path: staging
 
   release:
     name: Create Release
@@ -111,9 +102,15 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts
+    - name: Zip artifacts
+      run: |
+        for dir in artifacts/*/; do
+          dir_name=$(basename "$dir")
+          zip -r "artifacts/$dir_name.zip" "$dir"
+        done
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: artifacts/**/*.zip
+        files: artifacts/*.zip
         tag_name: ${{ env.release_name }}
         name: ${{ env.release_name }}
