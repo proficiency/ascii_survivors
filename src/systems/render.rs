@@ -10,40 +10,44 @@ fn world_to_screen(world_position: IVec2, terminal_size: UVec2) -> IVec2 {
     )
 }
 
+pub struct ResourceBarConfig<'a> {
+    pub resource_name: &'a str,
+    pub filled_char: char,
+    pub bar_length: usize,
+    pub current_value: usize,
+    pub max_value: usize,
+    pub bar_color: Color,
+    pub bar_x_position: usize,
+}
+
 pub fn draw_resource_bar(
     terminal_query: &mut Query<&mut Terminal>,
-    resource_name: &str,
-    filled_char: char,
-    bar_length: usize,
-    current_value: usize,
-    max_value: usize,
-    bar_color: Color,
-    bar_x_position: usize,
+    config: ResourceBarConfig,
 ) {
     if let Ok(mut terminal) = terminal_query.single_mut() {
-        let resource_ratio = if max_value > 0 {
-            current_value as f32 / max_value as f32
+        let resource_ratio = if config.max_value > 0 {
+            config.current_value as f32 / config.max_value as f32
         } else {
             0.0
         };
-        let filled_length = (resource_ratio * bar_length as f32) as usize;
+        let filled_length = (resource_ratio * config.bar_length as f32) as usize;
 
         let mut bar_content = String::new();
-        for i in 0..bar_length {
+        for i in 0..config.bar_length {
             if i < filled_length {
-                bar_content.push(filled_char);
+                bar_content.push(config.filled_char);
             }
         }
 
         let mut bar_ts = TerminalString::from(bar_content);
-        bar_ts.decoration.fg_color = Some(LinearRgba::from(bar_color));
+        bar_ts.decoration.fg_color = Some(LinearRgba::from(config.bar_color));
 
         // position the bar in the top-left corner, ensuring it fits
-        let formatted_resource_name = format!("{}:", resource_name);
+        let formatted_resource_name = format!("{}:", config.resource_name);
         let formatted_name_length = formatted_resource_name.len();
-        let formatted_bar_position = bar_x_position + formatted_name_length;
-        if bar_length + formatted_bar_position <= terminal.size()[0] as usize {
-            terminal.put_string([bar_x_position, 0], formatted_resource_name);
+        let formatted_bar_position = config.bar_x_position + formatted_name_length;
+        if config.bar_length + formatted_bar_position <= terminal.size()[0] as usize {
+            terminal.put_string([config.bar_x_position, 0], formatted_resource_name);
             terminal.put_string([formatted_bar_position, 0], bar_ts);
         }
     }
@@ -124,23 +128,27 @@ pub fn draw_scene(
         if let Ok(player) = player_query.single() {
             draw_resource_bar(
                 &mut terminal_query,
-                "HP",
-                '#',
-                20,
-                player.health as usize,
-                player.max_health as usize,
-                Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
-                0,
+                ResourceBarConfig {
+                    resource_name: "HP",
+                    filled_char: '#',
+                    bar_length: 20,
+                    current_value: player.health as usize,
+                    max_value: player.max_health as usize,
+                    bar_color: Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
+                    bar_x_position: 0,
+                },
             );
             draw_resource_bar(
                 &mut terminal_query,
-                &format!("XP (Lvl {})", player.level),
-                '#',
-                20,
-                player.experience as usize,
-                player.experience_to_next_level as usize,
-                Color::linear_rgba(0.1, 0.25, 1.0, 1.0),
-                30,
+                ResourceBarConfig {
+                    resource_name: &format!("XP (Lvl {})", player.level),
+                    filled_char: '#',
+                    bar_length: 20,
+                    current_value: player.experience as usize,
+                    max_value: player.experience_to_next_level as usize,
+                    bar_color: Color::linear_rgba(0.1, 0.25, 1.0, 1.0),
+                    bar_x_position: 30,
+                },
             );
         }
     }

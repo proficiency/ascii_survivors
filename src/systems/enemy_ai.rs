@@ -23,7 +23,7 @@ pub fn enemy_ai(
                 let player_world_pos = player.position - camera_offset.0;
                 let direction_to_player = (player_world_pos - enemy.position).as_vec2();
                 let attraction_force = if direction_to_player.length() > 0.0 {
-                    direction_to_player.normalize() * 1.0
+                    direction_to_player.normalize() * enemy.speed
                 } else {
                     Vec2::ZERO
                 };
