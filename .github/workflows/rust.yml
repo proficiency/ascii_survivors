@@ -42,7 +42,7 @@ jobs:
   package:
     name: Package for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    # if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: build
     strategy:
       matrix:
@@ -92,7 +92,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    # if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: package
     steps:
     - name: Generate release name
