@@ -21,7 +21,10 @@ jobs:
       run: sudo apt-get update
 
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+      run: sudo apt-get update && sudo apt-get install -y \
+        libasound2-dev \
+        libudev-dev \
+        pkg-config
   
     - uses: actions/checkout@v4
     
