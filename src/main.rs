@@ -44,17 +44,10 @@ impl Ruleset {
 #[derive(Resource)]
 pub struct CameraOffset(pub IVec2);
 
-struct GameState {
-    pub ruleset: Ruleset,
-    pub spawn_queue: Vec<i32>,
-    pub store: Vec<i32>,
-    pub sound_manager: SoundManager,
-}
-
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, TerminalPlugins))
-        .add_systems(Startup, (setup, list_gamepads).chain())
+        .add_systems(Startup, (setup, list_gamepads, play_theme).chain())
         .add_systems(
             Update,
             ((
@@ -85,6 +78,10 @@ fn main() {
         .insert_resource(CameraOffset(IVec2::default()))
         .insert_resource(SoundManager::new(PathBuf::from("./assets/sfx/")).unwrap())
         .run();
+}
+
+fn play_theme(mut sound_manager: ResMut<SoundManager>) {
+    sound_manager.play_theme(-17.0).unwrap();
 }
 
 fn setup(mut commands: Commands) {

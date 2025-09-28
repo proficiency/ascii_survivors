@@ -48,4 +48,14 @@ impl SoundManager {
 
         self.manager.play(sound).map_err(|e| anyhow::anyhow!(e))
     }
+
+    pub fn play_theme(&mut self, volume: f32) -> Result<StaticSoundHandle> {
+        let sound = self
+            .sounds
+            .get("./assets/sfx/harmony.ogg")
+            .ok_or_else(|| anyhow::anyhow!("theme not found"))?
+            .volume(Decibels(volume));
+
+        self.manager.play(sound).map_err(|e| anyhow::anyhow!(e))
+    }
 }
