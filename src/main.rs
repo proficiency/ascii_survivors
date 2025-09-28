@@ -1,7 +1,6 @@
 mod resources;
 mod systems;
 use crate::systems::cleanup::*;
-use bevy::input::gamepad::GamepadInput;
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 use rand::*;
@@ -89,13 +88,6 @@ struct EnemyMovementTimer(Timer);
 #[derive(Resource)]
 struct CameraOffset(IVec2);
 
-struct GameState {
-    pub ruleset: Ruleset,
-    pub spawn_queue: Vec<i32>,
-    pub store: Vec<i32>,
-    pub sound_manager: SoundManager,
-}
-
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, TerminalPlugins))
@@ -130,6 +122,10 @@ fn main() {
         .insert_resource(CameraOffset(IVec2::default()))
         .insert_resource(SoundManager::new(PathBuf::from("./assets/sfx/")).unwrap())
         .run();
+}
+
+fn play_theme(mut sound_manager: ResMut<SoundManager>) {
+    sound_manager.play_theme(-17.0).unwrap();
 }
 
 fn setup(mut commands: Commands) {
