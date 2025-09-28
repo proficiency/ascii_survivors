@@ -2,7 +2,7 @@ name: Rust CI/CD
 
 on:
   push:
-    branches: [ "main", "test-ci-workflow" ]
+    branches: [ "**" ]
   pull_request:
     branches: [ "main" ]
 
@@ -44,6 +44,7 @@ jobs:
   package:
     name: Package for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    # if: github.ref == 'refs/heads/main'
     needs: build
     strategy:
       matrix:
@@ -77,17 +78,17 @@ jobs:
           echo "BINARY_PATH=target/release/souls" >> $GITHUB_ENV
         fi
         echo "ARTIFACT_PATH=souls-$os_type.zip" >> $GITHUB_ENV
-    - name: Package artifacts
-      uses: thedoctor0/zip-release@master
-      with:
-        type: 'zip'
-        filename: ${{ env.ARTIFACT_PATH }}
-        path: ${{ env.BINARY_PATH }} assets
+    - name: Create staging directory and copy assets
+      run: |
+        mkdir -p staging
+        cp -r assets staging/
+    - name: Copy binary to staging directory
+      run: cp ${{ env.BINARY_PATH }} staging/
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: souls-${{ runner.os }}
-        path: ${{ env.ARTIFACT_PATH }}
+        name: souls-$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')
+        path: staging/
 
   release:
     name: Create Release
