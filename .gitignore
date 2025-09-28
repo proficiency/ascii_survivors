@@ -2,3 +2,4 @@
 Cargo.lock
 .idea
 /assets/sfx/unused
+.vscode/

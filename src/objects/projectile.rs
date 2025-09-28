@@ -3,6 +3,7 @@ use crate::objects::enemy::Enemy;
 use crate::objects::orb::Orb;
 use crate::objects::player::Player;
 use crate::resources::sound::SoundManager;
+use crate::resources::timers::ProjectileCooldownTimer;
 use crate::systems::cleanup::Despawn;
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
@@ -14,9 +15,6 @@ pub struct Projectile {
     pub damage: f32,
     pub speed: f32,
 }
-
-#[derive(Resource)]
-pub struct ProjectileCooldownTimer(pub Timer);
 
 pub fn auto_cast(
     mut commands: Commands,
