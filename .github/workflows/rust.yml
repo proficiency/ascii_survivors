@@ -107,4 +107,4 @@ jobs:
       with:
         files: artifacts/*/*.zip
         tag_name: ${{ env.release_name }}
-        name: Release ${{ env.release_name }}
+        name: ${{ env.release_name }}
