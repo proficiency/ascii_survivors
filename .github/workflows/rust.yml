@@ -1,27 +1,27 @@
-name: Rust
+name: Rust CI/CD
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: [ "**" ]
 
 env:
   CARGO_TERM_COLOR: always
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
+    name: Build & Test
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
-
     - name: Install system dependencies
       run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
-
+    - name: Install stable toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
@@ -32,20 +32,79 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Install stable toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rustfmt, clippy
-
     - name: Check formatting
       run: cargo fmt --check
-
     - name: Lint with Clippy
       run: cargo clippy -- -D warnings
-
-    - name: Build
-      run: cargo build --verbose
-
     - name: Run tests
       run: cargo test --verbose
+
+  package:
+    name: Package for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install system dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
+    - name: Install stable toolchain
+      uses: dtolnay/rust-toolchain@stable
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Build release
+      run: cargo build --release --verbose
+    - name: Set artifact name and path
+      shell: bash
+      run: |
+        os_type=$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')
+        echo "LOWERCASE_OS=$os_type" >> $GITHUB_ENV
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          echo "BINARY_PATH=target/release/souls.exe" >> $GITHUB_ENV
+        else
+          echo "BINARY_PATH=target/release/souls" >> $GITHUB_ENV
+        fi
+        echo "ARTIFACT_PATH=souls-$os_type.zip" >> $GITHUB_ENV
+    - name: Create staging directory and copy assets
+      run: |
+        mkdir -p staging
+        cp -r assets staging/
+    - name: Copy binary to staging directory
+      run: cp ${{ env.BINARY_PATH }} staging/
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: souls-${{ env.LOWERCASE_OS }}
+        path: staging/
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: package
+    steps:
+    - name: Generate release name
+      id: release_name
+      run: echo "release_name=release-$(date +%Y-%m-%d-%H%M%S)" >> $GITHUB_ENV
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: artifacts/*/*.zip
+        tag_name: ${{ env.release_name }}
+        name: Release ${{ env.release_name }}
