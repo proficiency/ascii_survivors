@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 #[derive(Resource, Debug, Default)]
+#[allow(unused)]
 pub struct Ruleset {
     pub enemy_health_modifier: f32,
     pub enemy_damage_modifier: f32,
@@ -13,6 +14,7 @@ pub struct Ruleset {
     pub enemies_stun_on_attack: bool,
 }
 
+#[allow(unused)]
 impl Ruleset {
     pub fn default() -> Self {
         Self {

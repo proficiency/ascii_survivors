@@ -74,7 +74,7 @@ fn setup(mut commands: Commands) {
 
 fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
     println!("Looking for gamepads...");
-    for (name, _gamepad) in &gamepads {
-        println!("Found gamepad: {name}");
+    for name in &gamepads {
+        println!("Found gamepad: {}", name.0);
     }
 }
