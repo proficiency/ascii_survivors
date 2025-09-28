@@ -67,19 +67,22 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Build release
       run: cargo build --release --verbose
-    - name: Package artifacts
+    - name: Set artifact name and path
       shell: bash
       run: |
-        os_type=${{ runner.os }}
-        if [ "$os_type" == "Windows" ]; then
-          binary_path="target/release/souls.exe"
+        os_type=$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          echo "BINARY_PATH=target/release/souls.exe" >> $GITHUB_ENV
         else
-          binary_path="target/release/souls"
+          echo "BINARY_PATH=target/release/souls" >> $GITHUB_ENV
         fi
-        zip_name="souls-$os_type.zip"
-        zip -r "$zip_name" assets
-        zip -uj "$zip_name" "$binary_path"
-        echo "ARTIFACT_PATH=$zip_name" >> $GITHUB_ENV
+        echo "ARTIFACT_PATH=souls-$os_type.zip" >> $GITHUB_ENV
+    - name: Package artifacts
+      uses: thedoctor0/zip-release@master
+      with:
+        type: 'zip'
+        filename: ${{ env.ARTIFACT_PATH }}
+        path: ${{ env.BINARY_PATH }} assets
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
