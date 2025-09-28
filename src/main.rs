@@ -1,11 +1,12 @@
 mod resources;
 mod systems;
+mod objects;
 
 use crate::systems::cleanup::*;
-use crate::systems::orbs::*;
-use crate::systems::player::*;
-use crate::systems::enemy::*;
-use crate::systems::projectile::*;
+use crate::objects::orb::*;
+use crate::objects::player::*;
+use crate::objects::enemy::*;
+use crate::objects::projectile::*;
 
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;

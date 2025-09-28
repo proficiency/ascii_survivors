@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
-use crate::systems::player::Player;
-use crate::systems::enemy::Enemy;
-use crate::systems::orbs::Orb;
+use crate::objects::player::Player;
+use crate::objects::enemy::Enemy;
+use crate::objects::orb::Orb;
 use crate::systems::cleanup::Despawn;
 use crate::resources::sound::SoundManager;
-use crate::CameraOffset; // Import CameraOffset from main.rs
+use crate::CameraOffset;
 
 #[derive(Component)]
 pub struct Projectile {

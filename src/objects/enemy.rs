@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 use rand::Rng;
 
-use crate::systems::player::Player;
+use crate::objects::player::Player;
 use crate::CameraOffset;
 
 #[derive(Component)]
