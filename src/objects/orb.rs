@@ -1,5 +1,5 @@
+use crate::{CameraOffset, Despawn, Player, experience_for_level};
 use bevy::prelude::*;
-use crate::{Player, Despawn, CameraOffset, experience_for_level};
 
 #[derive(Component)]
 pub struct Orb {
@@ -27,19 +27,19 @@ pub fn orb_movement(
 ) {
     if let Ok(player) = player_query.single() {
         let player_world_pos = player.position - camera_offset.0;
-        
+
         for mut orb in orb_query.iter_mut() {
             let direction_to_player = (player_world_pos - orb.position).as_vec2();
             let distance = direction_to_player.length();
-            
+
             const ATTRACTION_RADIUS: f32 = 20.0;
             const MIN_SPEED: f32 = 2.0;
             const MAX_SPEED: f32 = 10.0;
-            
+
             if distance > 0.0 && distance <= ATTRACTION_RADIUS {
                 // speed increases as distance decreases
                 let speed_factor = 1.0 - (distance / ATTRACTION_RADIUS);
-                let speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * speed_factor * speed_factor;                
+                let speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * speed_factor * speed_factor;
                 let movement = direction_to_player.normalize() * speed * time.delta_secs();
                 orb.precise_position += movement;
                 orb.position = orb.precise_position.as_ivec2();
@@ -57,13 +57,13 @@ pub fn process_orb_collection(
 ) {
     if let Ok(mut player) = player_query.single_mut() {
         let player_world_pos = player.position - camera_offset.0;
-        
+
         for (orb_entity, orb) in orb_query.iter() {
             let distance = (player_world_pos - orb.position).as_vec2().length();
             if distance <= 1.0 {
                 player.experience += orb.experience;
                 commands.entity(orb_entity).insert(Despawn);
-                
+
                 // Check for level up
                 while player.experience >= player.experience_to_next_level {
                     player.experience -= player.experience_to_next_level;

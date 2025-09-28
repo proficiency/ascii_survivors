@@ -11,14 +11,14 @@ fn world_to_screen(world_position: IVec2, terminal_size: UVec2) -> IVec2 {
 }
 
 pub fn draw_resource_bar(
-    mut terminal_query: &mut Query<&mut Terminal>, // a query to the terminal resource
-    resource_name: &str,                           // name of the resource (e.g., "HP", "XP", "MANA")
-    filled_char: char,                             // character to represent filled portion of the resource bar
-    bar_length: usize,                             // total length of the resource bar
-    current_value: usize,                          // current value of the resource
-    max_value: usize,                              // maximum value of the resource pool
-    bar_color: Color,                              // color
-    bar_x_position: usize,                         // placeholder: x position of the bar (not used in future implementation)
+    terminal_query: &mut Query<&mut Terminal>,
+    resource_name: &str,
+    filled_char: char,
+    bar_length: usize,
+    current_value: usize,
+    max_value: usize,
+    bar_color: Color,
+    bar_x_position: usize,
 ) {
     if let Ok(mut terminal) = terminal_query.single_mut() {
         let resource_ratio = if max_value > 0 {
@@ -72,7 +72,8 @@ pub fn draw_scene(
                 .contains_point([draw_position.x, draw_position.y])
             {
                 let mut orb_char = TerminalString::from("o");
-                orb_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgba(0.8, 0.2, 0.8, 1.0)));
+                orb_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgba(0.8, 0.2, 0.8, 1.0)));
                 terminal.put_string([draw_position.x, draw_position.y], orb_char);
             }
         }
@@ -87,7 +88,8 @@ pub fn draw_scene(
                 .contains_point([draw_position.x, draw_position.y])
             {
                 let mut enemy_char = TerminalString::from("d");
-                enemy_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
+                enemy_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
                 terminal.put_string([draw_position.x, draw_position.y], enemy_char);
             }
         }
@@ -96,14 +98,15 @@ pub fn draw_scene(
         for projectile in projectile_query.iter() {
             let world_position = projectile.position + camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
-            
+
             // ensure projectile is within our viewport before drawing it
             if terminal
                 .size()
                 .contains_point([draw_position.x, draw_position.y])
             {
                 let mut projectile_char = TerminalString::from("*");
-                projectile_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgba(1.0, 0.7, 0.0, 1.0)));
+                projectile_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgba(1.0, 0.7, 0.0, 1.0)));
                 terminal.put_string([draw_position.x, draw_position.y], projectile_char);
             }
         }
@@ -112,23 +115,33 @@ pub fn draw_scene(
         if let Ok(player) = player_query.single() {
             // note: the player is assumed to always be in the center of our viewpoint
             let mut player_position = TerminalString::from("@");
-            player_position.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
+            player_position.decoration.fg_color =
+                Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
             terminal.put_string([player.position.x, player.position.y], player_position);
         }
 
         // draw player info(hp bar, xp, etc)
         if let Ok(player) = player_query.single() {
-            draw_resource_bar(&mut terminal_query, "HP", '#', 20, player.health as usize, player.max_health as usize, Color::linear_rgba(0.0, 1.0, 0.1, 1.0), 0);
-            draw_resource_bar(
-                &mut terminal_query, 
-                &format!("XP (Lvl {})", player.level), 
-                '#', 
-                20, 
-                player.experience as usize, 
-                player.experience_to_next_level as usize, 
-                Color::linear_rgba(0.1, 0.25, 1.0, 1.0), 
-                30
-            );
+        draw_resource_bar(
+            &mut terminal_query,
+            "HP",
+            '#',
+            20,
+            player.health as usize,
+            player.max_health as usize,
+            Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
+            0,
+        );
+        draw_resource_bar(
+            &mut terminal_query,
+            &format!("XP (Lvl {})", player.level),
+            '#',
+            20,
+            player.experience as usize,
+            player.experience_to_next_level as usize,
+            Color::linear_rgba(0.1, 0.25, 1.0, 1.0),
+            30,
+        );
         }
     }
 }
