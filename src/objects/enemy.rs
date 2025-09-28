@@ -4,6 +4,7 @@ use bevy::prelude::*;
 pub struct Enemy {
     pub health: f32,
     pub position: IVec2,
+    pub speed: f32,
 }
 
 impl Enemy {
@@ -11,6 +12,7 @@ impl Enemy {
         Self {
             health: 50.0, // two hit kill
             position,
+            speed: 0.5,
         }
     }
 }
