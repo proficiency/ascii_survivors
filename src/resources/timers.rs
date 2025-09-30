@@ -17,3 +17,6 @@ pub struct DamageEffectTimer(pub Timer);
 
 #[derive(Resource)]
 pub struct LoadingTimer(pub Timer);
+
+#[derive(Resource)]
+pub struct FadeTimer(pub Timer);

@@ -16,7 +16,7 @@ use resources::camera::CameraOffset;
 use resources::game_state::GameState;
 use resources::sound::SoundManager;
 use resources::timers::{
-    DamageEffectTimer, EnemyMovementTimer, EnemySpawnTimer, LoadingTimer, PlayerMovementTimer,
+    DamageEffectTimer, EnemyMovementTimer, EnemySpawnTimer, FadeTimer, LoadingTimer, PlayerMovementTimer,
     ProjectileCooldownTimer,
 };
 use std::path::*;
@@ -43,6 +43,7 @@ fn main() {
             (setup, setup_resources, list_gamepads).chain(),
         )
         .add_systems(OnEnter(GameState::Loading), show_window)
+        .add_systems(OnEnter(GameState::FadingIn), (reset_fade_timer, play_start_sound).chain())
         .add_systems(OnEnter(GameState::Game), (setup_game, play_theme).chain())
         .add_systems(
             Update,
@@ -51,6 +52,8 @@ fn main() {
                 loading_update_system.run_if(in_state(GameState::Loading)),
                 menu_input_system.run_if(in_state(GameState::Menu)),
                 menu_render_system.run_if(in_state(GameState::Menu)),
+                fade_in_render_system.run_if(in_state(GameState::FadingIn)),
+                fade_in_update_system.run_if(in_state(GameState::FadingIn)),
                 (
                     player_movement,
                     spawn_enemies,
@@ -97,6 +100,7 @@ fn setup_resources(mut commands: Commands) {
     )));
     commands.insert_resource(DamageEffectTimer(Timer::from_seconds(0.5, TimerMode::Once)));
     commands.insert_resource(LoadingTimer(Timer::from_seconds(3.0, TimerMode::Once)));
+    commands.insert_resource(FadeTimer(Timer::from_seconds(2.0, TimerMode::Once)));
     commands.insert_resource(CameraOffset(IVec2::default()));
     commands.insert_resource(SoundManager::new(PathBuf::from("./assets/sfx/")).unwrap());
 }
@@ -144,7 +148,7 @@ fn menu_input_system(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if input.just_pressed(KeyCode::Space) || input.just_pressed(KeyCode::Enter) {
-        next_state.set(GameState::Game);
+        next_state.set(GameState::FadingIn);
     }
 }
 
@@ -200,5 +204,73 @@ fn loading_update_system(
 fn show_window(mut window_query: Query<&mut Window>) {
     if let Ok(mut window) = window_query.single_mut() {
         window.visible = true;
+    }
+}
+
+fn reset_fade_timer(mut fade_timer: ResMut<FadeTimer>) {
+    fade_timer.0.reset();
+}
+
+fn play_start_sound(mut sound_manager: ResMut<SoundManager>) {
+    let _ = sound_manager.play_sound(PathBuf::from("./assets/sfx/start.wav"), -5.0);
+}
+
+fn fade_in_render_system(mut query: Query<&mut Terminal>, fade_timer: Res<FadeTimer>) {
+    if let Ok(mut terminal) = query.single_mut() {
+        terminal.clear();
+        
+        // Calculate fade progress (0.0 = black screen, 1.0 = fully visible)
+        let fade_progress = fade_timer.0.fraction();
+        
+        // Create a fade effect by gradually revealing more content
+        let terminal_height = 50;
+        let terminal_width = 80;
+        
+        // Start by filling the screen with gradually clearing characters
+        let fade_char = if fade_progress < 0.3 {
+            '█' // Solid block
+        } else if fade_progress < 0.6 {
+            '▓' // Dark shade
+        } else if fade_progress < 0.9 {
+            '▒' // Medium shade
+        } else {
+            '░' // Light shade
+        };
+        
+        // Fill the screen with fade character, but reduce coverage as we progress
+        let coverage = 1.0 - fade_progress;
+        for y in 0..terminal_height {
+            for x in 0..terminal_width {
+                // Create a pattern that clears from center outward
+                let center_x = terminal_width as f32 / 2.0;
+                let center_y = terminal_height as f32 / 2.0;
+                let distance = ((x as f32 - center_x).powi(2) + (y as f32 - center_y).powi(2)).sqrt();
+                let max_distance = (center_x.powi(2) + center_y.powi(2)).sqrt();
+                let normalized_distance = distance / max_distance;
+                
+                if normalized_distance < coverage {
+                    terminal.put_char([x, y], fade_char);
+                }
+            }
+        }
+        
+        // Show "Starting..." text during fade
+        if fade_progress < 0.8 {
+            let starting_text = "Starting...";
+            let starting_x = (80 - starting_text.len()) / 2;
+            terminal.put_string([starting_x, 25], starting_text);
+        }
+    }
+}
+
+fn fade_in_update_system(
+    time: Res<Time>,
+    mut fade_timer: ResMut<FadeTimer>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    fade_timer.0.tick(time.delta());
+    
+    if fade_timer.0.finished() {
+        next_state.set(GameState::Game);
     }
 }

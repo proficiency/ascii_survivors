@@ -5,5 +5,6 @@ pub enum GameState {
     #[default]
     Loading,
     Menu,
+    FadingIn,
     Game,
 }
