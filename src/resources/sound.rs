@@ -1,6 +1,8 @@
 use anyhow::*;
 use bevy::prelude::Resource;
-use kira::{AudioManager, AudioManagerSettings, Decibels, DefaultBackend, sound::static_sound::*, Tween};
+use kira::{
+    AudioManager, AudioManagerSettings, Decibels, DefaultBackend, Tween, sound::static_sound::*,
+};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -82,7 +84,7 @@ impl SoundManager {
 
     pub fn stop_theme(&mut self) {
         if let Some(mut handle) = self.theme_handle.take() {
-            let _ = handle.stop(Tween::default());
+            handle.stop(Tween::default());
         }
     }
 }

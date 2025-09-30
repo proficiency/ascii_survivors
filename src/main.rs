@@ -72,7 +72,12 @@ fn main() {
                 )
                     .chain()
                     .run_if(in_state(GameState::Game)),
-                (game_over_input_system, game_over_render_system).run_if(in_state(GameState::GameOver)),
+                (
+                    game_over_input_system,
+                    despawn_all_entities.run_if(in_state(GameState::GameOver)),
+                    game_over_render_system,
+                )
+                    .run_if(in_state(GameState::GameOver)),
             ),
         )
         .run();
@@ -281,10 +286,10 @@ fn death_detection_system(
     player_query: Query<&Player>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if let Ok(player) = player_query.single() {
-        if player.health <= 0.0 {
-            next_state.set(GameState::GameOver);
-        }
+    if let Ok(player) = player_query.single()
+        && player.health <= 0.0
+    {
+        next_state.set(GameState::GameOver);
     }
 }
 
@@ -310,47 +315,36 @@ fn game_over_render_system(mut query: Query<&mut Terminal>) {
     }
 }
 
-fn game_over_input_system(
-    input: Res<ButtonInput<KeyCode>>,
-    mut next_state: ResMut<NextState<GameState>>,
+fn despawn_all_entities(
     mut commands: Commands,
     player_query: Query<Entity, With<Player>>,
     enemy_query: Query<Entity, With<Enemy>>,
     projectile_query: Query<Entity, With<Projectile>>,
     orb_query: Query<Entity, With<Orb>>,
+) {
+    for entity in player_query.iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in enemy_query.iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in projectile_query.iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in orb_query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn game_over_input_system(
+    input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GameState>>,
     mut camera_offset: ResMut<CameraOffset>,
 ) {
     if input.just_pressed(KeyCode::KeyR) {
-
-        for entity in player_query.iter() {
-            commands.entity(entity).despawn();
-        }
-        for entity in enemy_query.iter() {
-            commands.entity(entity).despawn();
-        }
-        for entity in projectile_query.iter() {
-            commands.entity(entity).despawn();
-        }
-        for entity in orb_query.iter() {
-            commands.entity(entity).despawn();
-        }
-        
         camera_offset.0 = IVec2::default();
         next_state.set(GameState::Game);
     } else if input.just_pressed(KeyCode::Escape) {
-        for entity in player_query.iter() {
-            commands.entity(entity).despawn();
-        }
-        for entity in enemy_query.iter() {
-            commands.entity(entity).despawn();
-        }
-        for entity in projectile_query.iter() {
-            commands.entity(entity).despawn();
-        }
-        for entity in orb_query.iter() {
-            commands.entity(entity).despawn();
-        }
-        
         camera_offset.0 = IVec2::default();
         next_state.set(GameState::Menu);
     }
