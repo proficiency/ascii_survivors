@@ -32,7 +32,7 @@ pub fn spawn_enemies(
             };
 
             // spawn the enemy offscreen
-            let spawn_position = IVec2::new(x, y) + camera_offset.0;
+            let spawn_position = IVec2::new(x, y) - camera_offset.0;
             commands.spawn((Enemy::new(spawn_position),));
         }
     }
