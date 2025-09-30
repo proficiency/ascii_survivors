@@ -19,4 +19,4 @@ Roguelike survivors-like game with a classic medieval fantasy theme — written 
 * [fibonacci development guidelines](https://github.com/proficiency/ascii_survivors/blob/main/design.md)
 
 > [!NOTE]
-> **work in progress**
+> **ascii_survivors is still a work in progress, the project is in it's infancy**
