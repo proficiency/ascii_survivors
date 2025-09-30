@@ -7,7 +7,7 @@ use crate::resources::timers::EnemyMovementTimer;
 
 pub fn enemy_ai(
     mut enemy_query: Query<&mut Enemy>,
-    player_query: Query<&Player>,
+    mut player_query: Query<&mut Player>,
     time: Res<Time>,
     mut timer: ResMut<EnemyMovementTimer>,
     camera_offset: Res<CameraOffset>,
@@ -15,12 +15,13 @@ pub fn enemy_ai(
     timer.0.tick(time.delta());
 
     if timer.0.finished()
-        && let Ok(player) = player_query.single()
+        && let Ok(mut player) = player_query.single_mut()
     {
+        let player_position = player.position;
         let enemy_positions: Vec<IVec2> = enemy_query.iter().map(|enemy| enemy.position).collect();
 
         for mut enemy in enemy_query.iter_mut() {
-            let player_world_pos = player.position - camera_offset.0;
+            let player_world_pos = player_position - camera_offset.0;
             let direction_to_player = (player_world_pos - enemy.position).as_vec2();
             let attraction_force = if direction_to_player.length() > 0.0 {
                 direction_to_player.normalize() * enemy.speed
@@ -81,6 +82,9 @@ pub fn enemy_ai(
                     // check if the desired position is occupied by the player
                     if player_world_pos == wish_move {
                         is_occupied = true;
+                        if let Ok(mut player) = player_query.single_mut() {
+                            player.health -= enemy.damage;
+                        }
                     }
 
                     // if the desired position is not occupied, move the enemy
