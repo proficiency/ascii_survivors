@@ -67,7 +67,7 @@ pub fn player_movement(
         if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight) {
             move_offset.x += 1;
         }
-        
+
         // this is kinda weird
         camera_offset.0 -= move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
         player.position = IVec2::new(center_x, center_y);
