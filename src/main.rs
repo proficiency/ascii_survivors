@@ -131,17 +131,14 @@ fn menu_render_system(mut query: Query<&mut Terminal>) {
     if let Ok(mut terminal) = query.single_mut() {
         terminal.clear();
 
-        // Draw title
         let title = "ASCII SURVIVORS";
         let title_x = (80 - title.len()) / 2;
         terminal.put_string([title_x, 15], title);
 
-        // Draw play button
         let button_text = "[ PLAY ]";
         let button_x = (80 - button_text.len()) / 2;
         terminal.put_string([button_x, 25], button_text);
 
-        // Draw instructions
         let instruction = "Press SPACE or ENTER to start";
         let instruction_x = (80 - instruction.len()) / 2;
         terminal.put_string([instruction_x, 30], instruction);
@@ -162,24 +159,20 @@ fn loading_render_system(mut query: Query<&mut Terminal>, loading_timer: Res<Loa
     if let Ok(mut terminal) = query.single_mut() {
         terminal.clear();
 
-        // Draw title
         let title = "ASCII SURVIVORS";
         let title_x = (80 - title.len()) / 2;
         terminal.put_string([title_x, 20], title);
 
-        // Draw loading text
         let loading_text = "Loading...";
         let loading_x = (80 - loading_text.len()) / 2;
         terminal.put_string([loading_x, 25], loading_text);
 
-        // Draw progress bar
         let progress = loading_timer.0.fraction();
         let bar_width = 40;
         let filled_width = (bar_width as f32 * progress) as usize;
 
         let bar_x = (80 - bar_width) / 2;
 
-        // Draw progress bar background
         for i in 0..bar_width {
             if i < filled_width {
                 terminal.put_char([bar_x + i, 27], '█');
@@ -188,7 +181,6 @@ fn loading_render_system(mut query: Query<&mut Terminal>, loading_timer: Res<Loa
             }
         }
 
-        // Draw percentage
         let percentage = format!("{}%", (progress * 100.0) as u32);
         let percent_x = (80 - percentage.len()) / 2;
         terminal.put_string([percent_x, 29], percentage);
@@ -225,29 +217,24 @@ fn fade_in_render_system(mut query: Query<&mut Terminal>, fade_timer: Res<FadeTi
     if let Ok(mut terminal) = query.single_mut() {
         terminal.clear();
 
-        // Calculate fade progress (0.0 = black screen, 1.0 = fully visible)
         let fade_progress = fade_timer.0.fraction();
 
-        // Create a fade effect by gradually revealing more content
         let terminal_height = 50;
         let terminal_width = 80;
 
-        // Start by filling the screen with gradually clearing characters
         let fade_char = if fade_progress < 0.3 {
-            '█' // Solid block
+            '█'
         } else if fade_progress < 0.6 {
-            '▓' // Dark shade
+            '▓'
         } else if fade_progress < 0.9 {
-            '▒' // Medium shade
+            '▒'
         } else {
-            '░' // Light shade
+            '░'
         };
 
-        // Fill the screen with fade character, but reduce coverage as we progress
         let coverage = 1.0 - fade_progress;
         for y in 0..terminal_height {
             for x in 0..terminal_width {
-                // Create a pattern that clears from center outward
                 let center_x = terminal_width as f32 / 2.0;
                 let center_y = terminal_height as f32 / 2.0;
                 let distance =
@@ -261,7 +248,6 @@ fn fade_in_render_system(mut query: Query<&mut Terminal>, fade_timer: Res<FadeTi
             }
         }
 
-        // Show "Starting..." text during fade
         if fade_progress < 0.8 {
             let starting_text = "Starting...";
             let starting_x = (80 - starting_text.len()) / 2;
