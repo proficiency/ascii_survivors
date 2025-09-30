@@ -32,7 +32,8 @@ impl SoundManager {
 
         let mut sounds = HashMap::<String, StaticSoundData>::with_capacity(sound_files.len());
         for file_path in sound_files {
-            let file_path = file_path.to_string_lossy().replace("\\", "/");
+            let mut file_path = file_path.as_path().to_string_lossy().replace("\\", "/");
+            file_path = file_path.replace("./assets/sfx/", "./");
 
             sounds.insert(
                 file_path.clone(),
@@ -73,7 +74,7 @@ impl SoundManager {
     pub fn play_theme(&mut self, volume: f32) -> Result<()> {
         let sound = self
             .sounds
-            .get("./assets/sfx/harmony.ogg")
+            .get("./harmony.ogg")
             .ok_or_else(|| anyhow::anyhow!("theme not found"))?
             .volume(Decibels(volume));
 

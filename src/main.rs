@@ -210,7 +210,7 @@ fn reset_fade_timer(mut fade_timer: ResMut<FadeTimer>) {
 }
 
 fn play_start_sound(mut sound_manager: ResMut<SoundManager>) {
-    let _ = sound_manager.play_sound(PathBuf::from("./assets/sfx/start.wav"), -5.0);
+    sound_manager.play_sound(PathBuf::from("./start.wav"), -5.0).expect("Failed to play start sound");
 }
 
 fn fade_in_render_system(mut query: Query<&mut Terminal>, fade_timer: Res<FadeTimer>) {

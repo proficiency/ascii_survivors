@@ -56,7 +56,7 @@ pub fn auto_cast(
             }
 
             sound_manager
-                .play_sound("./assets/sfx/25_Wind_01.wav".into(), -30.0)
+                .play_sound("./25_Wind_01.wav".into(), -30.0)
                 .ok();
             timer.0.reset();
         }
