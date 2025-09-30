@@ -11,3 +11,6 @@ pub struct EnemyMovementTimer(pub Timer);
 
 #[derive(Resource)]
 pub struct ProjectileCooldownTimer(pub Timer);
+
+#[derive(Resource)]
+pub struct DamageEffectTimer(pub Timer);

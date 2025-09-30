@@ -1,3 +1,4 @@
+mod effects;
 mod objects;
 mod resources;
 mod systems;
@@ -10,10 +11,12 @@ use crate::systems::cleanup::*;
 
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
+use effects::damage_effect::update_damage_effect;
 use resources::camera::CameraOffset;
 use resources::sound::SoundManager;
 use resources::timers::{
-    EnemyMovementTimer, EnemySpawnTimer, PlayerMovementTimer, ProjectileCooldownTimer,
+    DamageEffectTimer, EnemyMovementTimer, EnemySpawnTimer, PlayerMovementTimer,
+    ProjectileCooldownTimer,
 };
 use std::path::*;
 use systems::enemy_ai::enemy_ai;
@@ -41,6 +44,7 @@ fn main() {
                     process_orb_collection,
                 )
                     .chain(),
+                update_damage_effect,
                 systems::render::draw_scene,
                 despawn_entities,
             )
@@ -70,6 +74,7 @@ fn setup_resources(mut commands: Commands) {
         0.35,
         TimerMode::Repeating,
     )));
+    commands.insert_resource(DamageEffectTimer(Timer::from_seconds(0.5, TimerMode::Once)));
     commands.insert_resource(CameraOffset(IVec2::default()));
     commands.insert_resource(SoundManager::new(PathBuf::from("./assets/sfx/")).unwrap());
 }

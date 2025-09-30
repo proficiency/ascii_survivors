@@ -29,13 +29,13 @@ pub fn player_movement(
 
             if left_stick.y < -TOLERANCE {
                 move_offset.y -= 1;
-            } 
+            }
             if left_stick.y > TOLERANCE {
                 move_offset.y += 1;
-            } 
+            }
             if left_stick.x < -TOLERANCE {
                 move_offset.x -= 1;
-            } 
+            }
             if left_stick.x > TOLERANCE {
                 move_offset.x += 1;
             }

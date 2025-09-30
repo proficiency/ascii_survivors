@@ -1,21 +1,25 @@
 use bevy::prelude::*;
 
+use crate::effects::damage_effect::DamageEffect;
 use crate::objects::enemy::Enemy;
 use crate::objects::player::Player;
 use crate::resources::camera::CameraOffset;
+use crate::resources::timers::DamageEffectTimer;
 use crate::resources::timers::EnemyMovementTimer;
 
 pub fn enemy_ai(
+    mut commands: Commands,
     mut enemy_query: Query<&mut Enemy>,
-    mut player_query: Query<&mut Player>,
+    mut player_query: Query<(Entity, &mut Player)>,
     time: Res<Time>,
     mut timer: ResMut<EnemyMovementTimer>,
+    mut damage_effect_timer: ResMut<DamageEffectTimer>,
     camera_offset: Res<CameraOffset>,
 ) {
     timer.0.tick(time.delta());
 
     if timer.0.finished()
-        && let Ok(mut player) = player_query.single_mut()
+        && let Ok((_, player)) = player_query.single_mut()
     {
         let player_position = player.position;
         let enemy_positions: Vec<IVec2> = enemy_query.iter().map(|enemy| enemy.position).collect();
@@ -82,8 +86,10 @@ pub fn enemy_ai(
                     // check if the desired position is occupied by the player
                     if player_world_pos == wish_move {
                         is_occupied = true;
-                        if let Ok(mut player) = player_query.single_mut() {
+                        if let Ok((entity, mut player)) = player_query.single_mut() {
                             player.health -= enemy.damage;
+                            commands.entity(entity).insert(DamageEffect);
+                            damage_effect_timer.0.reset();
                         }
                     }
 
