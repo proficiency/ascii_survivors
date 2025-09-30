@@ -16,8 +16,8 @@ use resources::camera::CameraOffset;
 use resources::game_state::GameState;
 use resources::sound::SoundManager;
 use resources::timers::{
-    DamageEffectTimer, EnemyMovementTimer, EnemySpawnTimer, FadeTimer, LoadingTimer, PlayerMovementTimer,
-    ProjectileCooldownTimer,
+    DamageEffectTimer, EnemyMovementTimer, EnemySpawnTimer, FadeTimer, LoadingTimer,
+    PlayerMovementTimer, ProjectileCooldownTimer,
 };
 use std::path::*;
 use systems::enemy_ai::enemy_ai;
@@ -38,22 +38,20 @@ fn main() {
             TerminalPlugins,
         ))
         .init_state::<GameState>()
-        .add_systems(
-            Startup,
-            (setup, setup_resources, list_gamepads).chain(),
-        )
+        .add_systems(Startup, (setup, setup_resources, list_gamepads).chain())
         .add_systems(OnEnter(GameState::Loading), show_window)
-        .add_systems(OnEnter(GameState::FadingIn), (reset_fade_timer, play_start_sound).chain())
+        .add_systems(
+            OnEnter(GameState::FadingIn),
+            (reset_fade_timer, play_start_sound).chain(),
+        )
         .add_systems(OnEnter(GameState::Game), (setup_game, play_theme).chain())
         .add_systems(
             Update,
             (
-                loading_render_system.run_if(in_state(GameState::Loading)),
-                loading_update_system.run_if(in_state(GameState::Loading)),
-                menu_input_system.run_if(in_state(GameState::Menu)),
-                menu_render_system.run_if(in_state(GameState::Menu)),
-                fade_in_render_system.run_if(in_state(GameState::FadingIn)),
-                fade_in_update_system.run_if(in_state(GameState::FadingIn)),
+                (loading_render_system, loading_update_system).run_if(in_state(GameState::Loading)),
+                (menu_input_system, menu_render_system).run_if(in_state(GameState::Menu)),
+                (fade_in_render_system, fade_in_update_system)
+                    .run_if(in_state(GameState::FadingIn)),
                 (
                     player_movement,
                     spawn_enemies,
@@ -155,24 +153,24 @@ fn menu_input_system(
 fn loading_render_system(mut query: Query<&mut Terminal>, loading_timer: Res<LoadingTimer>) {
     if let Ok(mut terminal) = query.single_mut() {
         terminal.clear();
-        
+
         // Draw title
         let title = "ASCII SURVIVORS";
         let title_x = (80 - title.len()) / 2;
         terminal.put_string([title_x, 20], title);
-        
+
         // Draw loading text
         let loading_text = "Loading...";
         let loading_x = (80 - loading_text.len()) / 2;
         terminal.put_string([loading_x, 25], loading_text);
-        
+
         // Draw progress bar
         let progress = loading_timer.0.fraction();
         let bar_width = 40;
         let filled_width = (bar_width as f32 * progress) as usize;
-        
+
         let bar_x = (80 - bar_width) / 2;
-        
+
         // Draw progress bar background
         for i in 0..bar_width {
             if i < filled_width {
@@ -181,7 +179,7 @@ fn loading_render_system(mut query: Query<&mut Terminal>, loading_timer: Res<Loa
                 terminal.put_char([bar_x + i, 27], '░');
             }
         }
-        
+
         // Draw percentage
         let percentage = format!("{}%", (progress * 100.0) as u32);
         let percent_x = (80 - percentage.len()) / 2;
@@ -195,7 +193,7 @@ fn loading_update_system(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     loading_timer.0.tick(time.delta());
-    
+
     if loading_timer.0.finished() {
         next_state.set(GameState::Menu);
     }
@@ -218,14 +216,14 @@ fn play_start_sound(mut sound_manager: ResMut<SoundManager>) {
 fn fade_in_render_system(mut query: Query<&mut Terminal>, fade_timer: Res<FadeTimer>) {
     if let Ok(mut terminal) = query.single_mut() {
         terminal.clear();
-        
+
         // Calculate fade progress (0.0 = black screen, 1.0 = fully visible)
         let fade_progress = fade_timer.0.fraction();
-        
+
         // Create a fade effect by gradually revealing more content
         let terminal_height = 50;
         let terminal_width = 80;
-        
+
         // Start by filling the screen with gradually clearing characters
         let fade_char = if fade_progress < 0.3 {
             '█' // Solid block
@@ -236,7 +234,7 @@ fn fade_in_render_system(mut query: Query<&mut Terminal>, fade_timer: Res<FadeTi
         } else {
             '░' // Light shade
         };
-        
+
         // Fill the screen with fade character, but reduce coverage as we progress
         let coverage = 1.0 - fade_progress;
         for y in 0..terminal_height {
@@ -244,16 +242,17 @@ fn fade_in_render_system(mut query: Query<&mut Terminal>, fade_timer: Res<FadeTi
                 // Create a pattern that clears from center outward
                 let center_x = terminal_width as f32 / 2.0;
                 let center_y = terminal_height as f32 / 2.0;
-                let distance = ((x as f32 - center_x).powi(2) + (y as f32 - center_y).powi(2)).sqrt();
+                let distance =
+                    ((x as f32 - center_x).powi(2) + (y as f32 - center_y).powi(2)).sqrt();
                 let max_distance = (center_x.powi(2) + center_y.powi(2)).sqrt();
                 let normalized_distance = distance / max_distance;
-                
+
                 if normalized_distance < coverage {
                     terminal.put_char([x, y], fade_char);
                 }
             }
         }
-        
+
         // Show "Starting..." text during fade
         if fade_progress < 0.8 {
             let starting_text = "Starting...";
@@ -269,7 +268,7 @@ fn fade_in_update_system(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     fade_timer.0.tick(time.delta());
-    
+
     if fade_timer.0.finished() {
         next_state.set(GameState::Game);
     }
