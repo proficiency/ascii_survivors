@@ -9,7 +9,7 @@ use crate::objects::player::*;
 use crate::objects::projectile::*;
 use crate::systems::cleanup::*;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
 use effects::damage_effect::update_damage_effect;
 use resources::camera::CameraOffset;
@@ -31,6 +31,7 @@ fn main() {
                 primary_window: Some(Window {
                     title: "ASCII Survivors".into(),
                     visible: false,
+                    present_mode: PresentMode::Fifo,
                     ..default()
                 }),
                 ..default()
