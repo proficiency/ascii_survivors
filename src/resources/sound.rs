@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Resource)]
-pub(crate) struct SoundManager {
+pub struct SoundManager {
     manager: AudioManager<DefaultBackend>,
     sounds: HashMap<String, StaticSoundData>,
     theme_handle: Option<kira::sound::static_sound::StaticSoundHandle>,

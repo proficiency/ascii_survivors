@@ -3,26 +3,10 @@ mod objects;
 mod resources;
 mod systems;
 
-use crate::objects::enemy::*;
-use crate::objects::orb::*;
-use crate::objects::player::*;
-use crate::objects::projectile::*;
-use crate::systems::cleanup::*;
-
+use crate::{effects::*, objects::*, resources::*, systems::*};
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
-use effects::damage_effect::update_damage_effect;
-use resources::camera::CameraOffset;
-use resources::game_state::GameState;
-use resources::sound::SoundManager;
-use resources::timers::{
-    DamageEffectTimer, EnemyMovementTimer, EnemySpawnTimer, FadeTimer, LoadingTimer,
-    PlayerMovementTimer, ProjectileCooldownTimer,
-};
 use std::path::*;
-use systems::enemy_ai::enemy_ai;
-use systems::enemy_spawn::spawn_enemies;
-use systems::player_movement::player_movement;
 
 fn main() {
     App::new()
@@ -109,7 +93,9 @@ fn setup_resources(mut commands: Commands) {
     commands.insert_resource(LoadingTimer(Timer::from_seconds(3.0, TimerMode::Once)));
     commands.insert_resource(FadeTimer(Timer::from_seconds(2.0, TimerMode::Once)));
     commands.insert_resource(CameraOffset(IVec2::default()));
-    commands.insert_resource(SoundManager::new(PathBuf::from("./assets/sfx/")).unwrap());
+    commands.insert_resource(
+        SoundManager::new(PathBuf::from("./assets/sfx/")).expect("failed to load manager"),
+    );
 }
 
 fn setup(mut commands: Commands) {
