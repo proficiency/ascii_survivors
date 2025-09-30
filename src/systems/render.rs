@@ -1,3 +1,4 @@
+use crate::effects::damage_effect::DamageEffect;
 use crate::{CameraOffset, Enemy, Orb, Player, Projectile};
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
@@ -51,7 +52,7 @@ pub fn draw_resource_bar(terminal_query: &mut Query<&mut Terminal>, config: Reso
 }
 
 pub fn draw_scene(
-    player_query: Query<&Player>,
+    player_query: Query<(&Player, Option<&DamageEffect>)>,
     enemy_query: Query<&Enemy>,
     projectile_query: Query<&Projectile>,
     orb_query: Query<&Orb>,
@@ -113,16 +114,23 @@ pub fn draw_scene(
         }
 
         // draw player
-        if let Ok(player) = player_query.single() {
+        if let Ok((player, damage_effect)) = player_query.single() {
             // note: the player is assumed to always be in the center of our viewpoint
             let mut player_position = TerminalString::from("@");
-            player_position.decoration.fg_color =
-                Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
+
+            if damage_effect.is_some() {
+                player_position.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)));
+            } else {
+                player_position.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
+            }
+
             terminal.put_string([player.position.x, player.position.y], player_position);
         }
 
         // draw player info(hp bar, xp, etc)
-        if let Ok(player) = player_query.single() {
+        if let Ok((player, _)) = player_query.single() {
             draw_resource_bar(
                 &mut terminal_query,
                 ResourceBarConfig {

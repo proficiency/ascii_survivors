@@ -1,6 +1,8 @@
 use anyhow::*;
 use bevy::prelude::Resource;
-use kira::{AudioManager, AudioManagerSettings, Decibels, DefaultBackend, sound::static_sound::*};
+use kira::{
+    AudioManager, AudioManagerSettings, Decibels, DefaultBackend, Tween, sound::static_sound::*,
+};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -8,6 +10,7 @@ use std::path::PathBuf;
 pub(crate) struct SoundManager {
     manager: AudioManager<DefaultBackend>,
     sounds: HashMap<String, StaticSoundData>,
+    theme_handle: Option<kira::sound::static_sound::StaticSoundHandle>,
 }
 
 impl SoundManager {
@@ -53,6 +56,7 @@ impl SoundManager {
         Ok(Self {
             manager: AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())?,
             sounds,
+            theme_handle: None,
         })
     }
 
@@ -66,13 +70,21 @@ impl SoundManager {
         self.manager.play(sound).map_err(|e| anyhow::anyhow!(e))
     }
 
-    pub fn play_theme(&mut self, volume: f32) -> Result<StaticSoundHandle> {
+    pub fn play_theme(&mut self, volume: f32) -> Result<()> {
         let sound = self
             .sounds
             .get("./assets/sfx/harmony.ogg")
             .ok_or_else(|| anyhow::anyhow!("theme not found"))?
             .volume(Decibels(volume));
 
-        self.manager.play(sound).map_err(|e| anyhow::anyhow!(e))
+        let handle = self.manager.play(sound).map_err(|e| anyhow::anyhow!(e))?;
+        self.theme_handle = Some(handle);
+        Ok(())
+    }
+
+    pub fn stop_theme(&mut self) {
+        if let Some(mut handle) = self.theme_handle.take() {
+            handle.stop(Tween::default());
+        }
     }
 }
