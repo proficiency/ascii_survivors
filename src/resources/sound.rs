@@ -32,21 +32,13 @@ impl SoundManager {
 
         let mut sounds = HashMap::<String, StaticSoundData>::with_capacity(sound_files.len());
         for file_path in sound_files {
-            let mut file_path = file_path.as_path().to_string_lossy().replace("\\", "/");
-            file_path = file_path.replace("./assets/sfx/", "./");
-
             sounds.insert(
-                file_path.clone(),
-                StaticSoundData::from_file(file_path.clone()).map_err(|e| anyhow::anyhow!(e))?,
-            );
-
-            sounds.insert(
-                file_path.clone().to_string().to_string(),
-                StaticSoundData::from_file(&file_path).map_err(|e| anyhow::anyhow!(e))?,
-            );
-
-            sounds.insert(
-                file_path.to_string(),
+                file_path
+                    .as_path()
+                    .to_string_lossy()
+                    .replace("\\", "/")
+                    .replace("./assets/sfx/", "./")
+                    .to_string(),
                 StaticSoundData::from_file(file_path).map_err(|e| anyhow::anyhow!(e))?,
             );
         }
