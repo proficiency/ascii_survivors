@@ -112,7 +112,7 @@ fn setup_resources(mut commands: Commands) {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn((Terminal::new([80, 50]), TerminalBorder::single_line()));
+    commands.spawn(Terminal::new([80, 50]));
     commands.spawn(TerminalCamera::new());
 }
 
