@@ -31,15 +31,15 @@ pub fn orb_movement(
         for mut orb in orb_query.iter_mut() {
             let direction_to_player = (player_world_pos - orb.position).as_vec2();
             let distance = direction_to_player.length();
+            let max_speed: f32 = player.speed * 1.15; // just so the player isn't able to outrun the orbs and create a mess
 
             const ATTRACTION_RADIUS: f32 = 20.0;
             const MIN_SPEED: f32 = 2.0;
-            const MAX_SPEED: f32 = 10.0;
 
             if distance > 0.0 && distance <= ATTRACTION_RADIUS {
                 // speed increases as distance decreases
                 let speed_factor = 1.0 - (distance / ATTRACTION_RADIUS);
-                let speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * speed_factor * speed_factor;
+                let speed = MIN_SPEED + (max_speed - MIN_SPEED) * speed_factor * speed_factor;
                 let movement = direction_to_player.normalize() * speed * time.delta_secs();
                 orb.precise_position += movement;
                 orb.position = orb.precise_position.as_ivec2();
