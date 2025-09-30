@@ -2,15 +2,16 @@
 _Survive, but in ASCII!_
 
 ## About
-roguelike game with a classic medieval fantasy theme — written in Rust with [Bevy](https://bevy.org/)
+Roguelike survivors-like game with a classic medieval fantasy theme — written in Rust with [Bevy](https://bevy.org/) 
 
 ### Features:
-* 'roguelike' mechanics with survivors-like gameplay
-* 'roguelite' aspects; persistent upgrades, revives, and ruleset changes
-* unique, meaningful, but subtle ASCII graphics
-* classic medieval rpg/adventure game themes
-* gamepad support
-* music and sound effects
+* Roguelike mechanics with survivors-like gameplay
+* Roguelite aspects
+  * persistent upgrades, revives, and ruleset changes
+* Unique, meaningful, but subtle ASCII graphics
+* Classic fantasy RPG adventure game themes
+* Play with gamepads or kb/m
+* Music and sound effects
 
 ### 📜 See also
 * [design document](https://github.com/proficiency/ascii_survivors/blob/main/design.md)
