@@ -45,6 +45,7 @@ fn main() {
             (reset_fade_timer, play_start_sound).chain(),
         )
         .add_systems(OnEnter(GameState::Game), (setup_game, play_theme).chain())
+        .add_systems(OnEnter(GameState::GameOver), stop_theme_music)
         .add_systems(
             Update,
             (
@@ -65,11 +66,13 @@ fn main() {
                     )
                         .chain(),
                     update_damage_effect,
+                    death_detection_system,
                     systems::render::draw_scene,
                     despawn_entities,
                 )
                     .chain()
                     .run_if(in_state(GameState::Game)),
+                (game_over_input_system, game_over_render_system).run_if(in_state(GameState::GameOver)),
             ),
         )
         .run();
@@ -271,5 +274,84 @@ fn fade_in_update_system(
 
     if fade_timer.0.finished() {
         next_state.set(GameState::Game);
+    }
+}
+
+fn death_detection_system(
+    player_query: Query<&Player>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if let Ok(player) = player_query.single() {
+        if player.health <= 0.0 {
+            next_state.set(GameState::GameOver);
+        }
+    }
+}
+
+fn stop_theme_music(mut sound_manager: ResMut<SoundManager>) {
+    sound_manager.stop_theme();
+}
+
+fn game_over_render_system(mut query: Query<&mut Terminal>) {
+    if let Ok(mut terminal) = query.single_mut() {
+        terminal.clear();
+
+        let death_message = "YOU DIED!";
+        let death_x = (80 - death_message.len()) / 2;
+        terminal.put_string([death_x, 20], death_message);
+
+        let restart_message = "Press R to Restart";
+        let restart_x = (80 - restart_message.len()) / 2;
+        terminal.put_string([restart_x, 25], restart_message);
+
+        let menu_message = "Press ESC to return to Menu";
+        let menu_x = (80 - menu_message.len()) / 2;
+        terminal.put_string([menu_x, 27], menu_message);
+    }
+}
+
+fn game_over_input_system(
+    input: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
+    player_query: Query<Entity, With<Player>>,
+    enemy_query: Query<Entity, With<Enemy>>,
+    projectile_query: Query<Entity, With<Projectile>>,
+    orb_query: Query<Entity, With<Orb>>,
+    mut camera_offset: ResMut<CameraOffset>,
+) {
+    if input.just_pressed(KeyCode::KeyR) {
+
+        for entity in player_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        for entity in enemy_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        for entity in projectile_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        for entity in orb_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        
+        camera_offset.0 = IVec2::default();
+        next_state.set(GameState::Game);
+    } else if input.just_pressed(KeyCode::Escape) {
+        for entity in player_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        for entity in enemy_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        for entity in projectile_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        for entity in orb_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        
+        camera_offset.0 = IVec2::default();
+        next_state.set(GameState::Menu);
     }
 }

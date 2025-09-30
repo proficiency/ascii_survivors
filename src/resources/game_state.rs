@@ -7,4 +7,5 @@ pub enum GameState {
     Menu,
     FadingIn,
     Game,
+    GameOver,
 }
