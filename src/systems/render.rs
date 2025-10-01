@@ -2,6 +2,7 @@ use crate::effects::damage_effect::DamageEffect;
 use crate::resources::timers::SurvivalTimer;
 use crate::resources::ruleset::Ruleset;
 use crate::{CameraOffset, Enemy, Orb, Player, Portal, Projectile};
+use crate::resources::level::Level;
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;
@@ -82,6 +83,7 @@ pub fn render_system(
     camera_offset: Res<CameraOffset>,
     survival_timer: Res<SurvivalTimer>,
     ruleset: Res<Ruleset>,
+    level: Res<Level>,
 ) {
     draw_scene(
         player_query,
@@ -93,6 +95,7 @@ pub fn render_system(
         camera_offset,
         survival_timer.0.elapsed_secs(),
         &ruleset,
+        level,
     );
 }
 
@@ -106,6 +109,7 @@ pub fn draw_scene(
     camera_offset: Res<CameraOffset>,
     seconds_survived: f32,
     ruleset: &Ruleset,
+    level: Res<Level>,
 ) {
     if let Ok(mut terminal) = terminal_query.single_mut() {
         terminal.clear();
@@ -223,6 +227,8 @@ pub fn draw_scene(
             );
         }
         
-        draw_survival_timer(terminal_query, seconds_survived, ruleset);
+        if matches!(level.as_ref(), Level::Survival) {
+            draw_survival_timer(terminal_query, seconds_survived, ruleset);
+        }
     }
 }

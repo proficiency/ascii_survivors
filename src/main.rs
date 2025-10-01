@@ -4,6 +4,7 @@ mod resources;
 mod systems;
 
 use crate::{effects::*, objects::*, resources::*, systems::*};
+use crate::systems::cleanup::despawn_portals;
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
 use std::path::*;
@@ -30,7 +31,7 @@ fn main() {
             (reset_fade_timer, play_start_sound).chain(),
         )
         .add_systems(OnEnter(GameState::Game), (setup_game, play_theme).chain())
-        .add_systems(OnEnter(GameState::LevelTransition), (setup_level_transition, stop_theme_music).chain())
+        .add_systems(OnEnter(GameState::LevelTransition), (setup_level_transition, despawn_portals).chain())
         .add_systems(OnEnter(GameState::GameOver), stop_theme_music)
         .add_systems(
             Update,
@@ -78,8 +79,10 @@ fn main() {
         .run();
 }
 
-fn play_theme(mut sound_manager: ResMut<SoundManager>) {
-    sound_manager.play_theme(-17.0).unwrap();
+fn play_theme(mut sound_manager: ResMut<SoundManager>, level: Res<Level>) {
+    if level.as_ref() == &Level::Survival {
+        sound_manager.play_theme(-17.0).unwrap();
+    }
 }
 
 fn setup_resources(mut commands: Commands) {
@@ -108,6 +111,7 @@ fn setup_resources(mut commands: Commands) {
     commands.insert_resource(CameraOffset(IVec2::default()));
     commands.insert_resource(crate::resources::scene_lock::SceneLock::default());
     commands.insert_resource(crate::resources::ruleset::Ruleset::default());
+    commands.insert_resource(crate::resources::level::Level::default()); // Add Level resource
     commands.insert_resource(
         SoundManager::new(PathBuf::from("./assets/sfx/")).expect("failed to load manager"),
     );
@@ -356,6 +360,8 @@ fn setup_level_transition(
     orb_query: Query<Entity, With<Orb>>,
     mut player_query: Query<&mut Player>,
     mut camera_offset: ResMut<CameraOffset>,
+    level: Res<Level>,
+    mut scene_lock: ResMut<crate::resources::scene_lock::SceneLock>,
 ) {
     for entity in enemy_query.iter() {
         commands.entity(entity).despawn();
@@ -373,6 +379,12 @@ fn setup_level_transition(
     }
     
     camera_offset.0 = IVec2::default();
+    
+    if level.as_ref() == &Level::Rest {
+        scene_lock.0 = true;
+    } else {
+        scene_lock.0 = false;
+    }
 }
 
 fn level_transition_system(

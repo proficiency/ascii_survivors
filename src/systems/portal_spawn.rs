@@ -4,7 +4,7 @@ use rand::Rng;
 
 use crate::{
     objects::portal::Portal, 
-    resources::{timers::SurvivalTimer, scene_lock::SceneLock, camera::CameraOffset, ruleset::Ruleset}, 
+    resources::{timers::SurvivalTimer, scene_lock::SceneLock, camera::CameraOffset, ruleset::Ruleset, level::Level}, 
     Player
 };
 
@@ -23,7 +23,12 @@ pub fn spawn_portal_after_survival(
     terminal_query: Query<&Terminal>,
     mut scene_lock: ResMut<SceneLock>,
     camera_offset: Res<CameraOffset>,
+    level: Res<Level>,
 ) {
+    if level.as_ref() == &Level::Rest {
+        return;
+    }
+    
     if survival_timer.0.elapsed_secs() >= ruleset.portal_spawn_time {
         if portal_query.is_empty() {
             scene_lock.0 = true;

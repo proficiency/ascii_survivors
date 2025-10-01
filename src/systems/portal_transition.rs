@@ -1,11 +1,13 @@
 use bevy::prelude::*;
 use crate::objects::{Player, Portal};
-use crate::resources::{PortalTransition, PortalTransitionState, GameState};
+use crate::resources::{PortalTransition, PortalTransitionState, GameState, Level, SoundManager};
 
 pub fn portal_transition_system(
     time: Res<Time>,
     mut portal_transition: ResMut<PortalTransition>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut level: ResMut<Level>,
+    mut sound_manager: ResMut<SoundManager>,
     player_query: Query<&Player>,
     portal_query: Query<&Portal>,
 ) {
@@ -35,6 +37,17 @@ pub fn portal_transition_system(
                     portal_transition.progress = portal_transition.timer.fraction();
                     
                     if portal_transition.timer.finished() {
+                        let transitioning_to_rest = matches!(level.as_ref(), Level::Survival);
+                        
+                        *level = match level.as_ref() {
+                            Level::Survival => Level::Rest,
+                            Level::Rest => Level::Survival,
+                        };
+                        
+                        if transitioning_to_rest {
+                            sound_manager.stop_theme();
+                        }
+                        
                         next_state.set(GameState::LevelTransition);
                         portal_transition.state = PortalTransitionState::Inactive;
                         portal_transition.progress = 0.0;
