@@ -6,6 +6,7 @@ use crate::objects::enemy::Enemy;
 use crate::resources::camera::CameraOffset;
 use crate::resources::timers::{EnemySpawnTimer, SurvivalTimer};
 use crate::resources::ruleset::Ruleset;
+use crate::resources::GameState;
 
 pub fn spawn_enemies(
     mut commands: Commands,
@@ -15,8 +16,10 @@ pub fn spawn_enemies(
     ruleset: Res<Ruleset>,
     terminal_query: Query<&Terminal>,
     camera_offset: Res<CameraOffset>,
+    game_state: Res<State<GameState>>,
 ) {
-    if survival_timer.0.elapsed_secs() >= ruleset.portal_spawn_time {
+    if survival_timer.0.elapsed_secs() >= ruleset.portal_spawn_time 
+        || *game_state.get() == GameState::LevelTransition {
         return;
     }
     
