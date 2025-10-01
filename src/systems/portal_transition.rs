@@ -79,7 +79,7 @@ pub fn render_portal_transition(
     }
 
     if let (Ok(mut terminal), Ok(player)) = (query.single_mut(), player_query.single()) {
-        let screen_pos = player.world_position - camera_offset.0;
+        let screen_pos = player.world_position + camera_offset.0;
         
         if screen_pos.x >= 0 && screen_pos.x < 80 && screen_pos.y >= 0 && screen_pos.y < 50 {
             let radius = (portal_transition.progress * 3.0) as i32;
