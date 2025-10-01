@@ -20,3 +20,6 @@ pub struct LoadingTimer(pub Timer);
 
 #[derive(Resource)]
 pub struct FadeTimer(pub Timer);
+
+#[derive(Resource)]
+pub struct SurvivalTimer(pub Timer);

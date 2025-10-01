@@ -41,6 +41,8 @@ fn main() {
                 (
                     player_movement,
                     spawn_enemies,
+                    spawn_portal_after_survival,
+                    update_survival_timer,
                     (
                         enemy_ai,
                         auto_cast,
@@ -52,7 +54,7 @@ fn main() {
                         .chain(),
                     update_damage_effect,
                     death_detection_system,
-                    systems::render::draw_scene,
+                    systems::render::render_system,
                     despawn_entities,
                 )
                     .chain()
@@ -92,7 +94,10 @@ fn setup_resources(mut commands: Commands) {
     commands.insert_resource(DamageEffectTimer(Timer::from_seconds(0.5, TimerMode::Once)));
     commands.insert_resource(LoadingTimer(Timer::from_seconds(3.0, TimerMode::Once)));
     commands.insert_resource(FadeTimer(Timer::from_seconds(2.0, TimerMode::Once)));
+    commands.insert_resource(SurvivalTimer(Timer::from_seconds(3600.0, TimerMode::Once)));
     commands.insert_resource(CameraOffset(IVec2::default()));
+    commands.insert_resource(crate::resources::scene_lock::SceneLock::default());
+    commands.insert_resource(crate::resources::ruleset::Ruleset::default());
     commands.insert_resource(
         SoundManager::new(PathBuf::from("./assets/sfx/")).expect("failed to load manager"),
     );
@@ -323,4 +328,8 @@ fn game_over_input_system(
         camera_offset.0 = IVec2::default();
         next_state.set(GameState::Menu);
     }
+}
+
+fn update_survival_timer(time: Res<Time>, mut survival_timer: ResMut<SurvivalTimer>) {
+    survival_timer.0.tick(time.delta());
 }

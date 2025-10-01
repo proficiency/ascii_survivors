@@ -23,10 +23,10 @@ pub fn orb_movement(
     mut orb_query: Query<&mut Orb>,
     player_query: Query<&Player>,
     time: Res<Time>,
-    camera_offset: Res<CameraOffset>,
+    _camera_offset: Res<CameraOffset>,
 ) {
     if let Ok(player) = player_query.single() {
-        let player_world_pos = player.position - camera_offset.0;
+        let player_world_pos = player.world_position;
 
         for mut orb in orb_query.iter_mut() {
             let direction_to_player = (player_world_pos - orb.position).as_vec2();
@@ -53,10 +53,10 @@ pub fn process_orb_collection(
     mut commands: Commands,
     mut player_query: Query<&mut Player>,
     orb_query: Query<(Entity, &Orb)>,
-    camera_offset: Res<CameraOffset>,
+    _camera_offset: Res<CameraOffset>,
 ) {
     if let Ok(mut player) = player_query.single_mut() {
-        let player_world_pos = player.position - camera_offset.0;
+        let player_world_pos = player.world_position;
 
         for (orb_entity, orb) in orb_query.iter() {
             let distance = (player_world_pos - orb.position).as_vec2().length();
