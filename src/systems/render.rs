@@ -1,7 +1,7 @@
 use crate::effects::damage_effect::DamageEffect;
 use crate::resources::timers::SurvivalTimer;
 use crate::resources::ruleset::Ruleset;
-use crate::{CameraOffset, Enemy, Orb, Player, Portal, Projectile};
+use crate::{CameraOffset, Enemy, Orb, Player, Portal, Projectile, Campfire, Ember};
 use crate::resources::level::Level;
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
@@ -79,6 +79,8 @@ pub fn render_system(
     projectile_query: Query<&Projectile>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
+    campfire_query: Query<&Campfire>,
+    ember_query: Query<&Ember>,
     mut terminal_query: Query<&mut Terminal>,
     camera_offset: Res<CameraOffset>,
     survival_timer: Res<SurvivalTimer>,
@@ -91,6 +93,8 @@ pub fn render_system(
         projectile_query,
         orb_query,
         portal_query,
+        campfire_query,
+        ember_query,
         &mut terminal_query,
         camera_offset,
         survival_timer.0.elapsed_secs(),
@@ -105,6 +109,8 @@ pub fn draw_scene(
     projectile_query: Query<&Projectile>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
+    campfire_query: Query<&Campfire>,
+    ember_query: Query<&Ember>,
     terminal_query: &mut Query<&mut Terminal>,
     camera_offset: Res<CameraOffset>,
     seconds_survived: f32,
@@ -194,6 +200,43 @@ pub fn draw_scene(
                 portal_char.decoration.fg_color =
                     Some(LinearRgba::from(Color::linear_rgba(0.0, 1.0, 1.0, 1.0)));
                 terminal.put_string([draw_position.x, draw_position.y], portal_char);
+            }
+        }
+        
+        // draw campfire
+        for campfire in campfire_query.iter() {
+            let world_position = campfire.position + camera_offset.0;
+            let draw_position = world_to_screen(world_position, terminal_size);
+            
+            let wood_position = IVec2::new(draw_position.x, draw_position.y + 1);
+            if terminal.size().contains_point([wood_position.x, wood_position.y]) {
+                let mut wood_char = TerminalString::from("=");
+                wood_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(0.5, 0.25, 0.0))); // Brown
+                terminal.put_string([wood_position.x, wood_position.y], wood_char);
+            }
+            
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
+                let (character, color) = campfire.get_current_visual();
+                let mut campfire_char = TerminalString::from(character.to_string());
+                campfire_char.decoration.fg_color = Some(LinearRgba::from(color));
+                terminal.put_string([draw_position.x, draw_position.y], campfire_char);
+            }
+        }
+        
+        for ember in ember_query.iter() {
+            let world_position = ember.position + camera_offset.0;
+            let draw_position = world_to_screen(world_position, terminal_size);
+            
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
+                let mut ember_char = TerminalString::from(".");
+                ember_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(1.0, 0.5, 0.0)));
+                terminal.put_string([draw_position.x, draw_position.y], ember_char);
             }
         }
 

@@ -53,6 +53,8 @@ fn main() {
                         process_collisions,
                         orb_movement,
                         process_orb_collection,
+                        campfire_animation_system,
+                        ember_animation_system,
                     )
                         .chain(),
                     update_damage_effect,
@@ -382,6 +384,7 @@ fn setup_level_transition(
     
     if level.as_ref() == &Level::Rest {
         scene_lock.0 = true;
+        commands.spawn((Campfire::new(IVec2::new(40, 25)), Transform::default()));
     } else {
         scene_lock.0 = false;
     }
