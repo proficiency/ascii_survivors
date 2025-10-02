@@ -396,17 +396,11 @@ fn setup_level_transition(
     if level.as_ref() == &Level::Rest {
         scene_lock.0 = true;
         let campfire_position = IVec2::new(40, 25);
-        let wood_position = IVec2::new(40, 24);
         
         commands.spawn((
             Campfire::new(campfire_position),
             Interaction::new(InteractionType::Campfire),
             Transform::from_xyz(campfire_position.x as f32, campfire_position.y as f32, 0.0),
-        ));
-        
-        commands.spawn((
-            Interaction::new(InteractionType::Campfire),
-            Transform::from_xyz(wood_position.x as f32, wood_position.y as f32, 0.0),
         ));
     } else {
         scene_lock.0 = false;

@@ -8,7 +8,7 @@ pub struct Ruleset {
 impl Default for Ruleset {
     fn default() -> Self {
         Self {
-            portal_spawn_time: 5.0,
+            portal_spawn_time: 20.0,
         }
     }
 }

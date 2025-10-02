@@ -17,7 +17,7 @@ pub fn heal_player_system(
             if player.health < player.max_health {
                 player.health = player.max_health;
                 sound_manager
-                    .play_sound(PathBuf::from("./assets/sfx/45_Charge_05.wav"), -5.0)
+                    .play_sound(PathBuf::from("./heal.ogg"), -13.0)
                     .expect("Failed to play healing sound");
                 commands.entity(entity).remove::<Message>();
                 commands.entity(player_entity).insert(StatusEffect {
