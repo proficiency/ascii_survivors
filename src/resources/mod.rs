@@ -1,5 +1,6 @@
 pub mod camera;
 pub mod game_state;
+pub mod kill_count;
 pub mod level;
 pub mod ruleset;
 pub mod scene_lock;

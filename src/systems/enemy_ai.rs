@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::effects::damage_effect::DamageEffect;
+use crate::effects::status_effect::StatusEffect;
 use crate::objects::enemy::Enemy;
 use crate::objects::player::Player;
 use crate::resources::scene_lock::SceneLock;
@@ -105,7 +105,9 @@ pub fn enemy_ai(
 
     if player_damage_taken > 0.0 {
         player.health -= player_damage_taken;
-        commands.entity(player_entity).insert(DamageEffect);
+        commands.entity(player_entity).insert(StatusEffect {
+            color: Color::linear_rgb(1.0, 0.0, 0.0),
+        });
         damage_effect_timer.0.reset();
     }
 }

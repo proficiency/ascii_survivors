@@ -1,7 +1,7 @@
-use crate::effects::damage_effect::DamageEffect;
+use crate::effects::status_effect::StatusEffect;
 use crate::resources::timers::SurvivalTimer;
 use crate::resources::ruleset::Ruleset;
-use crate::{CameraOffset, Enemy, Orb, Player, Portal, Projectile, Campfire, Ember};
+use crate::{CameraOffset, Enemy, Orb, Player, Portal, Projectile, Campfire, Ember, ShopNpc};
 use crate::resources::level::Level;
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
@@ -74,13 +74,14 @@ pub fn draw_survival_timer(terminal_query: &mut Query<&mut Terminal>, seconds_su
 }
 
 pub fn render_system(
-    player_query: Query<(&Player, Option<&DamageEffect>)>,
+    player_query: Query<(&Player, Option<&StatusEffect>)>,
     enemy_query: Query<&Enemy>,
     projectile_query: Query<&Projectile>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
     campfire_query: Query<&Campfire>,
     ember_query: Query<&Ember>,
+    shop_npc_query: Query<&ShopNpc>,
     mut terminal_query: Query<&mut Terminal>,
     camera_offset: Res<CameraOffset>,
     survival_timer: Res<SurvivalTimer>,
@@ -95,6 +96,7 @@ pub fn render_system(
         portal_query,
         campfire_query,
         ember_query,
+        shop_npc_query,
         &mut terminal_query,
         camera_offset,
         survival_timer.0.elapsed_secs(),
@@ -104,13 +106,14 @@ pub fn render_system(
 }
 
 pub fn draw_scene(
-    player_query: Query<(&Player, Option<&DamageEffect>)>,
+    player_query: Query<(&Player, Option<&StatusEffect>)>,
     enemy_query: Query<&Enemy>,
     projectile_query: Query<&Projectile>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
     campfire_query: Query<&Campfire>,
     ember_query: Query<&Ember>,
+    shop_npc_query: Query<&ShopNpc>,
     terminal_query: &mut Query<&mut Terminal>,
     camera_offset: Res<CameraOffset>,
     seconds_survived: f32,
@@ -172,13 +175,12 @@ pub fn draw_scene(
         }
 
         // draw player
-        if let Ok((player, damage_effect)) = player_query.single() {
+        if let Ok((player, status_effect)) = player_query.single() {
             // note: the player is assumed to always be in the center of our viewpoint
             let mut player_position = TerminalString::from("@");
 
-            if damage_effect.is_some() {
-                player_position.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)));
+            if let Some(effect) = status_effect {
+                player_position.decoration.fg_color = Some(LinearRgba::from(effect.color));
             } else {
                 player_position.decoration.fg_color =
                     Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
@@ -237,6 +239,21 @@ pub fn draw_scene(
                 let mut ember_char = TerminalString::from(".");
                 ember_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(1.0, 0.5, 0.0)));
                 terminal.put_string([draw_position.x, draw_position.y], ember_char);
+            }
+        }
+        
+        // draw shop npcs
+        for shop_npc in shop_npc_query.iter() {
+            let world_position = shop_npc.position + camera_offset.0;
+            let draw_position = world_to_screen(world_position, terminal_size);
+            
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
+                let mut npc_char = TerminalString::from("S");
+                npc_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(0.0, 1.0, 1.0)));
+                terminal.put_string([draw_position.x, draw_position.y], npc_char);
             }
         }
 

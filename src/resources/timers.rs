@@ -50,3 +50,6 @@ impl Default for PortalTransition {
 
 #[derive(Resource)]
 pub struct LevelTransitionTimer(pub Timer);
+
+#[derive(Resource)]
+pub struct InteractionTimer(pub Timer);

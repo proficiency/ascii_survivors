@@ -3,7 +3,7 @@ mod objects;
 mod resources;
 mod systems;
 
-use crate::{effects::*, objects::*, resources::*, systems::*};
+use crate::{effects::*, objects::{interaction::{Interaction, InteractionType}, *,}, resources::*, systems::*};
 use crate::systems::cleanup::despawn_portals;
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
@@ -44,6 +44,9 @@ fn main() {
                     player_movement,
                     spawn_enemies,
                     spawn_portal_after_survival,
+                    spawn_shop_npcs_on_rest_level,
+                    interaction_system,
+                    heal_player_system,
                     portal_transition_system,
                     update_survival_timer,
                     (
@@ -57,11 +60,17 @@ fn main() {
                         ember_animation_system,
                     )
                         .chain(),
-                    update_damage_effect,
+                    update_status_effect,
                     death_detection_system,
                     systems::render::render_system,
+                    render_message_system,
                     render_portal_transition,
                     despawn_entities,
+                )
+                    .chain()
+                    .run_if(in_state(GameState::Game)),
+                (
+                    heal_player_system,
                 )
                     .chain()
                     .run_if(in_state(GameState::Game)),
@@ -109,11 +118,13 @@ fn setup_resources(mut commands: Commands) {
     commands.insert_resource(FadeTimer(Timer::from_seconds(2.0, TimerMode::Once)));
     commands.insert_resource(SurvivalTimer(Timer::from_seconds(3600.0, TimerMode::Once)));
     commands.insert_resource(LevelTransitionTimer(Timer::from_seconds(1.0, TimerMode::Once)));
+    commands.insert_resource(InteractionTimer(Timer::from_seconds(0.5, TimerMode::Once)));
     commands.insert_resource(PortalTransition::default());
     commands.insert_resource(CameraOffset(IVec2::default()));
     commands.insert_resource(crate::resources::scene_lock::SceneLock::default());
     commands.insert_resource(crate::resources::ruleset::Ruleset::default());
     commands.insert_resource(crate::resources::level::Level::default()); // Add Level resource
+    commands.insert_resource(crate::resources::kill_count::KillCount::default());
     commands.insert_resource(
         SoundManager::new(PathBuf::from("./assets/sfx/")).expect("failed to load manager"),
     );
@@ -384,7 +395,19 @@ fn setup_level_transition(
     
     if level.as_ref() == &Level::Rest {
         scene_lock.0 = true;
-        commands.spawn((Campfire::new(IVec2::new(40, 25)), Transform::default()));
+        let campfire_position = IVec2::new(40, 25);
+        let wood_position = IVec2::new(40, 24);
+        
+        commands.spawn((
+            Campfire::new(campfire_position),
+            Interaction::new(InteractionType::Campfire),
+            Transform::from_xyz(campfire_position.x as f32, campfire_position.y as f32, 0.0),
+        ));
+        
+        commands.spawn((
+            Interaction::new(InteractionType::Campfire),
+            Transform::from_xyz(wood_position.x as f32, wood_position.y as f32, 0.0),
+        ));
     } else {
         scene_lock.0 = false;
     }

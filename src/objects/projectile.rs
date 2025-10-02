@@ -1,6 +1,7 @@
 use crate::objects::enemy::Enemy;
 use crate::objects::orb::Orb;
 use crate::objects::player::Player;
+use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
 use crate::resources::sound::SoundManager;
 use crate::resources::timers::ProjectileCooldownTimer;
@@ -116,21 +117,25 @@ pub fn process_projectiles(
 pub fn process_collisions(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Projectile)>,
-    mut enemy_query: Query<(Entity, &mut Enemy)>,
+    mut enemy_query: Query<(Entity, &mut Enemy), Without<Despawn>>,
+    mut kill_count: ResMut<KillCount>,
     _scene_lock: Res<SceneLock>,
 ) {
     // todo: currently only checking projectiles against enemies
     for (projectile_entity, projectile) in projectile_query.iter() {
         for (enemy_entity, mut enemy) in enemy_query.iter_mut() {
             if projectile.position == enemy.position {
-                // take damage
-                enemy.health -= projectile.damage;
+                if enemy.health > 0.0 {
+                    // take damage
+                    enemy.health -= projectile.damage;
 
-                // if enemy's health pool is depleted, mark it for despawn
-                if enemy.health <= 0.0 {
-                    // spawn an orb at the enemy's position before despawning
-                    commands.spawn(Orb::new(enemy.position, 10));
-                    commands.entity(enemy_entity).insert(Despawn);
+                    // if enemy's health pool is depleted, mark it for despawn
+                    if enemy.health <= 0.0 {
+                        // spawn an orb at the enemy's position before despawning
+                        commands.spawn(Orb::new(enemy.position, 10));
+                        commands.entity(enemy_entity).insert(Despawn);
+                        kill_count.enemies += 1;
+                    }
                 }
 
                 // mark projectile for despawn
