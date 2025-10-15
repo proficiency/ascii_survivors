@@ -8,6 +8,7 @@ This document aims to outline aspects of the game's features.
   * Castles, dungeons, and... lore? 
 
 ## Gameplay
+The goal of ascii survivors is to provide a challenging, rewarding, and replayable experience, with a focus on meaningful choices and build identity. The game is designed to be difficult, but fair, with a high skill ceiling and a low barrier to entry.
 * Survivors-esque game with roguelike mechanics:
   * Exploration, combat, and resource management
   * Large, in-depth pool of items and upgrades
@@ -22,6 +23,11 @@ This document aims to outline aspects of the game's features.
   * Ruleset changes, modifiers, and quests
 * Play with kb/m or gamepads
 * Several simple but hand-crafted levels
+#### Features:
+* Unique, upgradeable torch item, providing light in dark areas like caves or dungeons. Acquired early into the game.
+* Rest area including a campfire, where the player can heal, and a shop, where players can permanently upgrade their character and purchase items.
+
+
 
 ## Visuals
 * **ASCII graphics**
