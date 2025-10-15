@@ -1,14 +1,7 @@
-use crate::objects::enemy::Enemy;
-use crate::objects::orb::Orb;
-use crate::objects::player::Player;
-use crate::resources::kill_count::KillCount;
-use crate::resources::scene_lock::SceneLock;
-use crate::resources::sound::SoundManager;
-use crate::resources::timers::ProjectileCooldownTimer;
-use crate::systems::cleanup::Despawn;
-use crate::CameraOffset;
+use crate::{objects::*, resources::*, systems::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
+use bevy_kira_audio::prelude::*;
 
 #[derive(Component)]
 pub struct Projectile {
@@ -24,7 +17,8 @@ pub fn auto_cast(
     enemy_query: Query<(Entity, &Enemy)>,
     time: Res<Time>,
     mut timer: ResMut<ProjectileCooldownTimer>,
-    mut sound_manager: ResMut<SoundManager>,
+    asset_server: Res<AssetServer>,
+    audio: Res<AudioChannel<Sfx>>,
     _scene_lock: Res<SceneLock>,
 ) {
     timer.0.tick(time.delta());
@@ -39,7 +33,7 @@ pub fn auto_cast(
         for (enemy_entity, enemy) in enemy_query.iter() {
             let enemy_world_pos = enemy.position;
             let player_world_pos = player.world_position;
-            
+
             let distance = (enemy_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
                 min_distance = distance;
@@ -60,9 +54,9 @@ pub fn auto_cast(
                 },));
             }
 
-            sound_manager
-                .play_sound("./25_Wind_01.wav".into(), -30.0)
-                .ok();
+            audio
+                .play(asset_server.load("sfx/25_Wind_01.wav"))
+                .with_volume(0.25);
             timer.0.reset();
         }
     }

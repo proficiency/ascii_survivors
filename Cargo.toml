@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 bevy = "0.16.0"
+bevy_kira_audio = { version="0.23.0", features = ["default", "wav"] }
 bevy_ascii_terminal = "0.17.0"
-rand = "0.8.5"
+rand = "0.10.0-rc.0"
 anyhow = "1.0.99"
-kira = "0.10.8"

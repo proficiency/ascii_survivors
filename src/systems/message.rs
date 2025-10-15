@@ -15,7 +15,11 @@ pub fn render_message_system(
                 commands.entity(entity).remove::<Message>();
             } else {
                 let position = transform.translation();
-                let terminal_position = IVec2::new(position.x as i32 + 1, terminal.size()[1] as i32 - position.y as i32 - 3);
+                let terminal_position = IVec2::new(
+                    position.x as i32 + 1,
+                    terminal.size()[1] as i32 - position.y as i32 - 3,
+                );
+
                 let mut text = message.text.clone();
                 text.truncate(terminal.size()[0] as usize - terminal_position.x as usize);
                 let message_string = TerminalString::from(text);

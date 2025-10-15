@@ -12,6 +12,8 @@ pub mod shop_npc;
 pub use campfire::*;
 pub use ember::*;
 pub use enemy::*;
+pub use interaction::*;
+pub use message::*;
 pub use orb::*;
 pub use player::*;
 pub use portal::*;

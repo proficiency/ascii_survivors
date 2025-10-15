@@ -3,11 +3,10 @@ mod objects;
 mod resources;
 mod systems;
 
-use crate::{effects::*, objects::{interaction::{Interaction, InteractionType}, *,}, resources::*, systems::*};
-use crate::systems::cleanup::despawn_portals;
+use crate::{effects::*, objects::*, resources::*, systems::*};
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
-use std::path::*;
+use bevy_kira_audio::prelude::*;
 
 fn main() {
     App::new()
@@ -22,8 +21,11 @@ fn main() {
                 ..default()
             }),
             TerminalPlugins,
+            AudioPlugin,
         ))
         .init_state::<GameState>()
+        .add_audio_channel::<Music>()
+        .add_audio_channel::<Sfx>()
         .add_systems(Startup, (setup, setup_resources, list_gamepads).chain())
         .add_systems(OnEnter(GameState::Loading), show_window)
         .add_systems(
@@ -31,8 +33,16 @@ fn main() {
             (reset_fade_timer, play_start_sound).chain(),
         )
         .add_systems(OnEnter(GameState::Game), (setup_game, play_theme).chain())
-        .add_systems(OnEnter(GameState::LevelTransition), (setup_level_transition, despawn_portals).chain())
-        .add_systems(OnEnter(GameState::GameOver), stop_theme_music)
+        .add_systems(
+            OnEnter(GameState::LevelTransition),
+            (setup_level_transition, despawn_portals).chain(),
+        )
+        .add_systems(
+            OnEnter(GameState::GameOver),
+            |music_channel: Res<AudioChannel<Music>>| {
+                music_channel.stop();
+            },
+        )
         .add_systems(
             Update,
             (
@@ -69,15 +79,10 @@ fn main() {
                 )
                     .chain()
                     .run_if(in_state(GameState::Game)),
-                (
-                    heal_player_system,
-                )
+                (heal_player_system,)
                     .chain()
                     .run_if(in_state(GameState::Game)),
-                (
-                    level_transition_system,
-                    level_transition_render_system,
-                )
+                (level_transition_system, level_transition_render_system)
                     .run_if(in_state(GameState::LevelTransition)),
                 (
                     game_over_input_system,
@@ -90,9 +95,12 @@ fn main() {
         .run();
 }
 
-fn play_theme(mut sound_manager: ResMut<SoundManager>, level: Res<Level>) {
+fn play_theme(asset_server: Res<AssetServer>, audio: Res<AudioChannel<Music>>, level: Res<Level>) {
     if level.as_ref() == &Level::Survival {
-        sound_manager.play_theme(-17.0).unwrap();
+        audio
+            .play(asset_server.load("sfx/harmony.ogg"))
+            .with_volume(0.1)
+            .looped();
     }
 }
 
@@ -117,7 +125,10 @@ fn setup_resources(mut commands: Commands) {
     commands.insert_resource(LoadingTimer(Timer::from_seconds(3.0, TimerMode::Once)));
     commands.insert_resource(FadeTimer(Timer::from_seconds(2.0, TimerMode::Once)));
     commands.insert_resource(SurvivalTimer(Timer::from_seconds(3600.0, TimerMode::Once)));
-    commands.insert_resource(LevelTransitionTimer(Timer::from_seconds(1.0, TimerMode::Once)));
+    commands.insert_resource(LevelTransitionTimer(Timer::from_seconds(
+        1.0,
+        TimerMode::Once,
+    )));
     commands.insert_resource(InteractionTimer(Timer::from_seconds(0.5, TimerMode::Once)));
     commands.insert_resource(PortalTransition::default());
     commands.insert_resource(CameraOffset(IVec2::default()));
@@ -125,9 +136,6 @@ fn setup_resources(mut commands: Commands) {
     commands.insert_resource(crate::resources::ruleset::Ruleset::default());
     commands.insert_resource(crate::resources::level::Level::default()); // Add Level resource
     commands.insert_resource(crate::resources::kill_count::KillCount::default());
-    commands.insert_resource(
-        SoundManager::new(PathBuf::from("./assets/sfx/")).expect("failed to load manager"),
-    );
 }
 
 fn setup(mut commands: Commands) {
@@ -135,10 +143,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(TerminalCamera::new());
 }
 
-fn setup_game(
-    mut commands: Commands,
-    player_query: Query<&Player>
-) {
+fn setup_game(mut commands: Commands, player_query: Query<&Player>) {
     if player_query.is_empty() {
         commands.spawn((Player::new(IVec2::new(40, 25)), Transform::default()));
     }
@@ -233,10 +238,10 @@ fn reset_fade_timer(mut fade_timer: ResMut<FadeTimer>) {
     fade_timer.0.reset();
 }
 
-fn play_start_sound(mut sound_manager: ResMut<SoundManager>) {
-    sound_manager
-        .play_sound(PathBuf::from("./start.wav"), -5.0)
-        .expect("Failed to play start sound");
+fn play_start_sound(asset_server: Res<AssetServer>, audio: Res<AudioChannel<Sfx>>) {
+    audio
+        .play(asset_server.load("sfx/start.wav"))
+        .with_volume(0.5);
 }
 
 fn fade_in_render_system(mut query: Query<&mut Terminal>, fade_timer: Res<FadeTimer>) {
@@ -303,10 +308,6 @@ fn death_detection_system(
     {
         next_state.set(GameState::GameOver);
     }
-}
-
-fn stop_theme_music(mut sound_manager: ResMut<SoundManager>) {
-    sound_manager.stop_theme();
 }
 
 fn game_over_render_system(mut query: Query<&mut Terminal>) {
@@ -385,21 +386,21 @@ fn setup_level_transition(
     for entity in orb_query.iter() {
         commands.entity(entity).despawn();
     }
-    
+
     if let Ok(mut player) = player_query.single_mut() {
         player.position = IVec2::new(40, 25);
         player.world_position = IVec2::new(40, 25);
     }
-    
+
     camera_offset.0 = IVec2::default();
-    
+
     if level.as_ref() == &Level::Rest {
         scene_lock.0 = true;
         let campfire_position = IVec2::new(40, 25);
-        
+
         commands.spawn((
             Campfire::new(campfire_position),
-            Interaction::new(InteractionType::Campfire),
+            crate::objects::Interaction::new(InteractionType::Campfire),
             Transform::from_xyz(campfire_position.x as f32, campfire_position.y as f32, 0.0),
         ));
     } else {
@@ -413,7 +414,7 @@ fn level_transition_system(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     transition_timer.0.tick(time.delta());
-    
+
     if transition_timer.0.finished() {
         next_state.set(GameState::Game);
         transition_timer.0.reset();
@@ -423,11 +424,11 @@ fn level_transition_system(
 fn level_transition_render_system(mut query: Query<&mut Terminal>) {
     if let Ok(mut terminal) = query.single_mut() {
         terminal.clear();
-        
+
         let message = "Level Transition...";
         let message_x = (80 - message.len()) / 2;
         terminal.put_string([message_x, 25], message);
-        
+
         let sub_message = "Entering new area...";
         let sub_x = (80 - sub_message.len()) / 2;
         terminal.put_string([sub_x, 27], sub_message);
