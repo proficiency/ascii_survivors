@@ -53,6 +53,7 @@ fn main() {
                 (
                     player_movement,
                     spawn_enemies,
+                    spawn_bosses,
                     spawn_portal_after_survival,
                     spawn_shop_npcs_on_rest_level,
                     interaction_system,
@@ -61,6 +62,7 @@ fn main() {
                     update_survival_timer,
                     (
                         enemy_ai,
+                        boss_ai,
                         auto_cast,
                         process_projectiles,
                         process_collisions,
@@ -79,10 +81,15 @@ fn main() {
                 )
                     .chain()
                     .run_if(in_state(GameState::Game)),
-                (heal_player_system,)
+                (
+                    heal_player_system,
+                )
                     .chain()
                     .run_if(in_state(GameState::Game)),
-                (level_transition_system, level_transition_render_system)
+                (
+                    level_transition_system,
+                    level_transition_render_system,
+                )
                     .run_if(in_state(GameState::LevelTransition)),
                 (
                     game_over_input_system,

@@ -28,7 +28,6 @@ pub fn enemy_ai(
 
     let player_world_pos = player.world_position;
     let enemy_positions: Vec<IVec2> = enemy_query.iter().map(|enemy| enemy.position).collect();
-
     let mut player_damage_taken = 0.0;
 
     for mut enemy in enemy_query.iter_mut() {
@@ -49,9 +48,9 @@ pub fn enemy_ai(
                 let distance = distance_vec.length();
 
                 if distance < SEPARATION_RADIUS && distance > 0.0 {
-                    let repulsion_strength =
-                        SEPARATION_STRENGTH * (SEPARATION_RADIUS - distance) / SEPARATION_RADIUS;
-
+                    let repulsion_strength = SEPARATION_STRENGTH
+                        * (SEPARATION_RADIUS - distance)
+                        / SEPARATION_RADIUS;
                     separation_force += distance_vec.normalize() * repulsion_strength;
                 }
             }

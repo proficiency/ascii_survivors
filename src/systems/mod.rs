@@ -1,3 +1,5 @@
+pub mod boss_ai;
+pub mod boss_spawn;
 pub mod campfire_animation;
 pub mod cleanup;
 pub mod ember_animation;
@@ -12,6 +14,8 @@ pub mod portal_transition;
 pub mod render;
 pub mod shop_npc_spawn;
 
+pub use boss_ai::*;
+pub use boss_spawn::*;
 pub use campfire_animation::*;
 pub use cleanup::*;
 pub use ember_animation::*;

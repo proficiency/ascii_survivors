@@ -79,6 +79,7 @@ pub fn draw_survival_timer(
 pub fn render_system(
     player_query: Query<(&Player, Option<&StatusEffect>)>,
     enemy_query: Query<&Enemy>,
+    boss_query: Query<&Boss>,
     projectile_query: Query<&Projectile>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
@@ -94,6 +95,7 @@ pub fn render_system(
     draw_scene(
         player_query,
         enemy_query,
+        boss_query,
         projectile_query,
         orb_query,
         portal_query,
@@ -111,6 +113,7 @@ pub fn render_system(
 pub fn draw_scene(
     player_query: Query<(&Player, Option<&StatusEffect>)>,
     enemy_query: Query<&Enemy>,
+    boss_query: Query<&Boss>,
     projectile_query: Query<&Projectile>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
@@ -157,6 +160,23 @@ pub fn draw_scene(
                 enemy_char.decoration.fg_color =
                     Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
                 terminal.put_string([draw_position.x, draw_position.y], enemy_char);
+            }
+        }
+
+        // draw bosses
+        for boss in boss_query.iter() {
+            for segment in &boss.segments {
+                let world_position = segment.position + camera_offset.0;
+                let draw_position = world_to_screen(world_position, terminal_size);
+
+                if terminal
+                    .size()
+                    .contains_point([draw_position.x, draw_position.y])
+                {
+                    let mut boss_char = TerminalString::from(segment.character.to_string());
+                    boss_char.decoration.fg_color = Some(LinearRgba::from(segment.color));
+                    terminal.put_string([draw_position.x, draw_position.y], boss_char);
+                }
             }
         }
 
@@ -212,7 +232,6 @@ pub fn draw_scene(
         for campfire in campfire_query.iter() {
             let world_position = campfire.position + camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
-
             let wood_position = IVec2::new(draw_position.x, draw_position.y + 1);
             if terminal.size().contains_point([wood_position.x, wood_position.y]) {
                 let mut wood_char = TerminalString::from("=");
@@ -249,7 +268,6 @@ pub fn draw_scene(
         for shop_npc in shop_npc_query.iter() {
             let world_position = shop_npc.position + camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
-
             if terminal
                 .size()
                 .contains_point([draw_position.x, draw_position.y])
