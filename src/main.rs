@@ -3,7 +3,8 @@ mod objects;
 mod resources;
 mod systems;
 
-use crate::{effects::*, objects::*, resources::*, systems::*};
+use crate::{effects::*, objects::{interaction::{Interaction, InteractionType}, *,}, resources::*, systems::*};
+use crate::systems::cleanup::despawn_portals;
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
 use std::path::*;
@@ -30,6 +31,7 @@ fn main() {
             (reset_fade_timer, play_start_sound).chain(),
         )
         .add_systems(OnEnter(GameState::Game), (setup_game, play_theme).chain())
+        .add_systems(OnEnter(GameState::LevelTransition), (setup_level_transition, despawn_portals).chain())
         .add_systems(OnEnter(GameState::GameOver), stop_theme_music)
         .add_systems(
             Update,
@@ -41,6 +43,12 @@ fn main() {
                 (
                     player_movement,
                     spawn_enemies,
+                    spawn_portal_after_survival,
+                    spawn_shop_npcs_on_rest_level,
+                    interaction_system,
+                    heal_player_system,
+                    portal_transition_system,
+                    update_survival_timer,
                     (
                         enemy_ai,
                         auto_cast,
@@ -48,15 +56,29 @@ fn main() {
                         process_collisions,
                         orb_movement,
                         process_orb_collection,
+                        campfire_animation_system,
+                        ember_animation_system,
                     )
                         .chain(),
-                    update_damage_effect,
+                    update_status_effect,
                     death_detection_system,
-                    systems::render::draw_scene,
+                    systems::render::render_system,
+                    render_message_system,
+                    render_portal_transition,
                     despawn_entities,
                 )
                     .chain()
                     .run_if(in_state(GameState::Game)),
+                (
+                    heal_player_system,
+                )
+                    .chain()
+                    .run_if(in_state(GameState::Game)),
+                (
+                    level_transition_system,
+                    level_transition_render_system,
+                )
+                    .run_if(in_state(GameState::LevelTransition)),
                 (
                     game_over_input_system,
                     despawn_all_entities.run_if(in_state(GameState::GameOver)),
@@ -68,8 +90,10 @@ fn main() {
         .run();
 }
 
-fn play_theme(mut sound_manager: ResMut<SoundManager>) {
-    sound_manager.play_theme(-17.0).unwrap();
+fn play_theme(mut sound_manager: ResMut<SoundManager>, level: Res<Level>) {
+    if level.as_ref() == &Level::Survival {
+        sound_manager.play_theme(-17.0).unwrap();
+    }
 }
 
 fn setup_resources(mut commands: Commands) {
@@ -92,7 +116,15 @@ fn setup_resources(mut commands: Commands) {
     commands.insert_resource(DamageEffectTimer(Timer::from_seconds(0.5, TimerMode::Once)));
     commands.insert_resource(LoadingTimer(Timer::from_seconds(3.0, TimerMode::Once)));
     commands.insert_resource(FadeTimer(Timer::from_seconds(2.0, TimerMode::Once)));
+    commands.insert_resource(SurvivalTimer(Timer::from_seconds(3600.0, TimerMode::Once)));
+    commands.insert_resource(LevelTransitionTimer(Timer::from_seconds(1.0, TimerMode::Once)));
+    commands.insert_resource(InteractionTimer(Timer::from_seconds(0.5, TimerMode::Once)));
+    commands.insert_resource(PortalTransition::default());
     commands.insert_resource(CameraOffset(IVec2::default()));
+    commands.insert_resource(crate::resources::scene_lock::SceneLock::default());
+    commands.insert_resource(crate::resources::ruleset::Ruleset::default());
+    commands.insert_resource(crate::resources::level::Level::default()); // Add Level resource
+    commands.insert_resource(crate::resources::kill_count::KillCount::default());
     commands.insert_resource(
         SoundManager::new(PathBuf::from("./assets/sfx/")).expect("failed to load manager"),
     );
@@ -103,8 +135,13 @@ fn setup(mut commands: Commands) {
     commands.spawn(TerminalCamera::new());
 }
 
-fn setup_game(mut commands: Commands) {
-    commands.spawn((Player::new(IVec2::new(40, 25)), Transform::default()));
+fn setup_game(
+    mut commands: Commands,
+    player_query: Query<&Player>
+) {
+    if player_query.is_empty() {
+        commands.spawn((Player::new(IVec2::new(40, 25)), Transform::default()));
+    }
 }
 
 fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
@@ -322,5 +359,77 @@ fn game_over_input_system(
     } else if input.just_pressed(KeyCode::Escape) {
         camera_offset.0 = IVec2::default();
         next_state.set(GameState::Menu);
+    }
+}
+
+fn update_survival_timer(time: Res<Time>, mut survival_timer: ResMut<SurvivalTimer>) {
+    survival_timer.0.tick(time.delta());
+}
+
+fn setup_level_transition(
+    mut commands: Commands,
+    enemy_query: Query<Entity, With<Enemy>>,
+    projectile_query: Query<Entity, With<Projectile>>,
+    orb_query: Query<Entity, With<Orb>>,
+    mut player_query: Query<&mut Player>,
+    mut camera_offset: ResMut<CameraOffset>,
+    level: Res<Level>,
+    mut scene_lock: ResMut<crate::resources::scene_lock::SceneLock>,
+) {
+    for entity in enemy_query.iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in projectile_query.iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in orb_query.iter() {
+        commands.entity(entity).despawn();
+    }
+    
+    if let Ok(mut player) = player_query.single_mut() {
+        player.position = IVec2::new(40, 25);
+        player.world_position = IVec2::new(40, 25);
+    }
+    
+    camera_offset.0 = IVec2::default();
+    
+    if level.as_ref() == &Level::Rest {
+        scene_lock.0 = true;
+        let campfire_position = IVec2::new(40, 25);
+        
+        commands.spawn((
+            Campfire::new(campfire_position),
+            Interaction::new(InteractionType::Campfire),
+            Transform::from_xyz(campfire_position.x as f32, campfire_position.y as f32, 0.0),
+        ));
+    } else {
+        scene_lock.0 = false;
+    }
+}
+
+fn level_transition_system(
+    time: Res<Time>,
+    mut transition_timer: ResMut<LevelTransitionTimer>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    transition_timer.0.tick(time.delta());
+    
+    if transition_timer.0.finished() {
+        next_state.set(GameState::Game);
+        transition_timer.0.reset();
+    }
+}
+
+fn level_transition_render_system(mut query: Query<&mut Terminal>) {
+    if let Ok(mut terminal) = query.single_mut() {
+        terminal.clear();
+        
+        let message = "Level Transition...";
+        let message_x = (80 - message.len()) / 2;
+        terminal.put_string([message_x, 25], message);
+        
+        let sub_message = "Entering new area...";
+        let sub_x = (80 - sub_message.len()) / 2;
+        terminal.put_string([sub_x, 27], sub_message);
     }
 }

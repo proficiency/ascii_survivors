@@ -1,9 +1,19 @@
+pub mod campfire;
+pub mod ember;
 pub mod enemy;
+pub mod interaction;
+pub mod message;
 pub mod orb;
 pub mod player;
+pub mod portal;
 pub mod projectile;
+pub mod shop_npc;
 
+pub use campfire::*;
+pub use ember::*;
 pub use enemy::*;
 pub use orb::*;
 pub use player::*;
+pub use portal::*;
 pub use projectile::*;
+pub use shop_npc::*;

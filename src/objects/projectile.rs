@@ -1,10 +1,12 @@
-use crate::CameraOffset;
 use crate::objects::enemy::Enemy;
 use crate::objects::orb::Orb;
 use crate::objects::player::Player;
+use crate::resources::kill_count::KillCount;
+use crate::resources::scene_lock::SceneLock;
 use crate::resources::sound::SoundManager;
 use crate::resources::timers::ProjectileCooldownTimer;
 use crate::systems::cleanup::Despawn;
+use crate::CameraOffset;
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 
@@ -23,7 +25,7 @@ pub fn auto_cast(
     time: Res<Time>,
     mut timer: ResMut<ProjectileCooldownTimer>,
     mut sound_manager: ResMut<SoundManager>,
-    camera_offset: Res<CameraOffset>,
+    _scene_lock: Res<SceneLock>,
 ) {
     timer.0.tick(time.delta());
 
@@ -35,7 +37,10 @@ pub fn auto_cast(
         let mut min_distance = i32::MAX;
 
         for (enemy_entity, enemy) in enemy_query.iter() {
-            let distance = (enemy.position + camera_offset.0 - player.position).length_squared();
+            let enemy_world_pos = enemy.position;
+            let player_world_pos = player.world_position;
+            
+            let distance = (enemy_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
                 min_distance = distance;
                 nearest_enemy_entity = Some(enemy_entity);
@@ -44,7 +49,7 @@ pub fn auto_cast(
 
         // if we're targeting the nearest enemy, attack it
         if let Some(target_entity) = nearest_enemy_entity {
-            let player_position = player.position - camera_offset.0;
+            let player_position = player.world_position;
 
             for _ in 0..3 {
                 commands.spawn((Projectile {
@@ -69,6 +74,7 @@ pub fn process_projectiles(
     enemy_query: Query<&Enemy>,
     terminal_query: Query<&Terminal>,
     camera_offset: Res<CameraOffset>,
+    _scene_lock: Res<SceneLock>,
 ) {
     if let Ok(terminal) = terminal_query.single() {
         let terminal_size = terminal.size();
@@ -111,21 +117,25 @@ pub fn process_projectiles(
 pub fn process_collisions(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Projectile)>,
-    mut enemy_query: Query<(Entity, &mut Enemy)>,
-    _camera_offset: Res<CameraOffset>, // todo.
+    mut enemy_query: Query<(Entity, &mut Enemy), Without<Despawn>>,
+    mut kill_count: ResMut<KillCount>,
+    _scene_lock: Res<SceneLock>,
 ) {
     // todo: currently only checking projectiles against enemies
     for (projectile_entity, projectile) in projectile_query.iter() {
         for (enemy_entity, mut enemy) in enemy_query.iter_mut() {
             if projectile.position == enemy.position {
-                // take damage
-                enemy.health -= projectile.damage;
+                if enemy.health > 0.0 {
+                    // take damage
+                    enemy.health -= projectile.damage;
 
-                // if enemy's health pool is depleted, mark it for despawn
-                if enemy.health <= 0.0 {
-                    // spawn an orb at the enemy's position before despawning
-                    commands.spawn(Orb::new(enemy.position, 10));
-                    commands.entity(enemy_entity).insert(Despawn);
+                    // if enemy's health pool is depleted, mark it for despawn
+                    if enemy.health <= 0.0 {
+                        // spawn an orb at the enemy's position before despawning
+                        commands.spawn(Orb::new(enemy.position, 10));
+                        commands.entity(enemy_entity).insert(Despawn);
+                        kill_count.enemies += 1;
+                    }
                 }
 
                 // mark projectile for despawn
