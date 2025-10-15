@@ -10,5 +10,6 @@ pub mod timers;
 pub use camera::*;
 pub use game_state::*;
 pub use level::*;
+pub use ruleset::*;
 pub use sound::*;
 pub use timers::*;

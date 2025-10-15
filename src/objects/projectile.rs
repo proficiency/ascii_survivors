@@ -1,3 +1,4 @@
+use crate::objects::boss::Boss;
 use crate::objects::enemy::Enemy;
 use crate::objects::orb::Orb;
 use crate::objects::player::Player;
@@ -22,6 +23,7 @@ pub fn auto_cast(
     mut commands: Commands,
     player_query: Query<&Player>,
     enemy_query: Query<(Entity, &Enemy)>,
+    boss_query: Query<(Entity, &Boss)>,
     time: Res<Time>,
     mut timer: ResMut<ProjectileCooldownTimer>,
     mut sound_manager: ResMut<SoundManager>,
@@ -33,7 +35,7 @@ pub fn auto_cast(
     if timer.0.finished()
         && let Ok(player) = player_query.single()
     {
-        let mut nearest_enemy_entity: Option<Entity> = None;
+        let mut nearest_target_entity: Option<Entity> = None;
         let mut min_distance = i32::MAX;
 
         for (enemy_entity, enemy) in enemy_query.iter() {
@@ -43,12 +45,23 @@ pub fn auto_cast(
             let distance = (enemy_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
                 min_distance = distance;
-                nearest_enemy_entity = Some(enemy_entity);
+                nearest_target_entity = Some(enemy_entity);
             }
         }
 
-        // if we're targeting the nearest enemy, attack it
-        if let Some(target_entity) = nearest_enemy_entity {
+        for (boss_entity, boss) in boss_query.iter() {
+            let boss_world_pos = boss.get_head_position();
+            let player_world_pos = player.world_position;
+            
+            let distance = (boss_world_pos - player_world_pos).length_squared();
+            if distance < min_distance {
+                min_distance = distance;
+                nearest_target_entity = Some(boss_entity);
+            }
+        }
+
+        // if we're targeting the nearest enemy or boss, attack it
+        if let Some(target_entity) = nearest_target_entity {
             let player_position = player.world_position;
 
             for _ in 0..3 {
@@ -72,6 +85,7 @@ pub fn process_projectiles(
     mut commands: Commands,
     mut projectile_query: Query<(Entity, &mut Projectile)>,
     enemy_query: Query<&Enemy>,
+    boss_query: Query<&Boss>,
     terminal_query: Query<&Terminal>,
     camera_offset: Res<CameraOffset>,
     _scene_lock: Res<SceneLock>,
@@ -83,16 +97,24 @@ pub fn process_projectiles(
             let speed = projectile.speed;
             let mut target_exists = false;
 
-            // try to find a target
-            if let Some(target_entity) = projectile.target
-                && let Ok(target_enemy) = enemy_query.get(target_entity)
-            {
-                let direction = (target_enemy.position - projectile.position)
-                    .as_vec2()
-                    .normalize_or_zero();
+            if let Some(target_entity) = projectile.target {
+                if let Ok(target_enemy) = enemy_query.get(target_entity) {
+                    let direction = (target_enemy.position - projectile.position)
+                        .as_vec2()
+                        .normalize_or_zero();
 
-                target_exists = true;
-                projectile.position += (direction * speed).as_ivec2();
+                    target_exists = true;
+                    projectile.position += (direction * speed).as_ivec2();
+                }
+                // we can't find an enemy, but are there any bosses?    
+                else if let Ok(target_boss) = boss_query.get(target_entity) {
+                    let direction = (target_boss.get_head_position() - projectile.position)
+                        .as_vec2()
+                        .normalize_or_zero();
+
+                    target_exists = true;
+                    projectile.position += (direction * speed).as_ivec2();
+                }
             }
 
             // ensure the projectile is despawned if the target is dead or there was no valid target
@@ -118,6 +140,7 @@ pub fn process_collisions(
     mut commands: Commands,
     projectile_query: Query<(Entity, &Projectile)>,
     mut enemy_query: Query<(Entity, &mut Enemy), Without<Despawn>>,
+    mut boss_query: Query<(Entity, &mut Boss), Without<Despawn>>,
     mut kill_count: ResMut<KillCount>,
     _scene_lock: Res<SceneLock>,
 ) {
@@ -140,6 +163,24 @@ pub fn process_collisions(
 
                 // mark projectile for despawn
                 commands.entity(projectile_entity).insert(Despawn);
+            }
+        }
+        
+        for (boss_entity, mut boss) in boss_query.iter_mut() {
+            for (segment_index, segment) in boss.segments.iter().enumerate() {
+                if projectile.position == segment.position {
+                    let is_defeated = boss.take_damage(projectile.damage, segment_index);
+                    if is_defeated {
+                        for segment in &boss.segments {
+                            commands.spawn(Orb::new(segment.position, 50)); // bosses are worth more experience than normal enemies
+                        }
+                        commands.entity(boss_entity).insert(Despawn);
+                        kill_count.enemies += 1;
+                    }
+                    
+                    commands.entity(projectile_entity).insert(Despawn);
+                    break; // ensure a projectile can only damage one segment at a time
+                }
             }
         }
     }

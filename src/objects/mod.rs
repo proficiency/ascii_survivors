@@ -1,3 +1,4 @@
+pub mod boss;
 pub mod campfire;
 pub mod ember;
 pub mod enemy;
@@ -9,6 +10,7 @@ pub mod portal;
 pub mod projectile;
 pub mod shop_npc;
 
+pub use boss::*;
 pub use campfire::*;
 pub use ember::*;
 pub use enemy::*;

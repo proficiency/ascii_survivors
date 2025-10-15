@@ -43,6 +43,7 @@ fn main() {
                 (
                     player_movement,
                     spawn_enemies,
+                    spawn_bosses,
                     spawn_portal_after_survival,
                     spawn_shop_npcs_on_rest_level,
                     interaction_system,
@@ -51,6 +52,7 @@ fn main() {
                     update_survival_timer,
                     (
                         enemy_ai,
+                        boss_ai,
                         auto_cast,
                         process_projectiles,
                         process_collisions,
