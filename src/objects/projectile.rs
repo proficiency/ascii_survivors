@@ -4,7 +4,7 @@ use crate::objects::orb::Orb;
 use crate::objects::player::Player;
 use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
-use crate::resources::sound::SoundManager;
+use crate::resources::channels::*;
 use crate::resources::timers::ProjectileCooldownTimer;
 use crate::systems::cleanup::Despawn;
 use crate::CameraOffset;
@@ -27,6 +27,8 @@ pub fn auto_cast(
     boss_query: Query<(Entity, &Boss)>,
     time: Res<Time>,
     mut timer: ResMut<ProjectileCooldownTimer>,
+    audio: Res<AudioChannel<Sfx>>,
+    asset_server: Res<AssetServer>,
     _scene_lock: Res<SceneLock>,
 ) {
     timer.0.tick(time.delta());
@@ -61,7 +63,7 @@ pub fn auto_cast(
         }
 
         // if we're targeting the nearest enemy, attack it
-        if let Some(target_entity) = nearest_enemy_entity {
+        if let Some(target_entity) = nearest_target_entity {
             let player_position = player.world_position;
 
             for _ in 0..3 {
