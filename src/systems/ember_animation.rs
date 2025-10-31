@@ -11,10 +11,10 @@ pub fn ember_animation_system(
     if level.as_ref() != &Level::Rest {
         return;
     }
-    
+
     for (entity, mut ember) in ember_query.iter_mut() {
         ember.update(&time);
-        
+
         if ember.lifetime.finished() {
             commands.entity(entity).despawn();
         }

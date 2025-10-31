@@ -13,6 +13,7 @@ pub mod portal_spawn;
 pub mod portal_transition;
 pub mod render;
 pub mod shop_npc_spawn;
+pub mod spell_casting;
 
 pub use boss_ai::*;
 pub use boss_spawn::*;
@@ -28,3 +29,4 @@ pub use player_movement::*;
 pub use portal_spawn::*;
 pub use portal_transition::*;
 pub use shop_npc_spawn::*;
+pub use spell_casting::*;

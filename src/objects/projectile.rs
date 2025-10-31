@@ -2,12 +2,11 @@ use crate::objects::boss::Boss;
 use crate::objects::enemy::Enemy;
 use crate::objects::orb::Orb;
 use crate::objects::player::Player;
+use crate::resources::channels::*;
 use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
-use crate::resources::sound::SoundManager;
 use crate::resources::timers::ProjectileCooldownTimer;
 use crate::systems::cleanup::Despawn;
-use crate::CameraOffset;
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 
@@ -26,7 +25,8 @@ pub fn auto_cast(
     boss_query: Query<(Entity, &Boss)>,
     time: Res<Time>,
     mut timer: ResMut<ProjectileCooldownTimer>,
-    mut sound_manager: ResMut<SoundManager>,
+    audio: Res<AudioChannel<Sfx>>,
+    asset_server: Res<AssetServer>,
     _scene_lock: Res<SceneLock>,
 ) {
     timer.0.tick(time.delta());
@@ -41,7 +41,7 @@ pub fn auto_cast(
         for (enemy_entity, enemy) in enemy_query.iter() {
             let enemy_world_pos = enemy.position;
             let player_world_pos = player.world_position;
-            
+
             let distance = (enemy_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
                 min_distance = distance;
@@ -52,7 +52,7 @@ pub fn auto_cast(
         for (boss_entity, boss) in boss_query.iter() {
             let boss_world_pos = boss.get_head_position();
             let player_world_pos = player.world_position;
-            
+
             let distance = (boss_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
                 min_distance = distance;
@@ -60,7 +60,7 @@ pub fn auto_cast(
             }
         }
 
-        // if we're targeting the nearest enemy or boss, attack it
+        // if we're targeting the nearest enemy, attack it
         if let Some(target_entity) = nearest_target_entity {
             let player_position = player.world_position;
 
@@ -73,9 +73,9 @@ pub fn auto_cast(
                 },));
             }
 
-            sound_manager
-                .play_sound("./25_Wind_01.wav".into(), -30.0)
-                .ok();
+            audio
+                .play(asset_server.load("sfx/25_Wind_01.wav"))
+                .with_volume(0.25);
             timer.0.reset();
         }
     }
@@ -106,7 +106,7 @@ pub fn process_projectiles(
                     target_exists = true;
                     projectile.position += (direction * speed).as_ivec2();
                 }
-                // we can't find an enemy, but are there any bosses?    
+                // we can't find an enemy, but are there any bosses?
                 else if let Ok(target_boss) = boss_query.get(target_entity) {
                     let direction = (target_boss.get_head_position() - projectile.position)
                         .as_vec2()
@@ -165,7 +165,7 @@ pub fn process_collisions(
                 commands.entity(projectile_entity).insert(Despawn);
             }
         }
-        
+
         for (boss_entity, mut boss) in boss_query.iter_mut() {
             for (segment_index, segment) in boss.segments.iter().enumerate() {
                 if projectile.position == segment.position {
@@ -177,7 +177,7 @@ pub fn process_collisions(
                         commands.entity(boss_entity).insert(Despawn);
                         kill_count.enemies += 1;
                     }
-                    
+
                     commands.entity(projectile_entity).insert(Despawn);
                     break; // ensure a projectile can only damage one segment at a time
                 }

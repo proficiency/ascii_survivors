@@ -1,8 +1,4 @@
-use crate::effects::status_effect::StatusEffect;
-use crate::resources::timers::SurvivalTimer;
-use crate::resources::ruleset::Ruleset;
-use crate::{Boss, CameraOffset, Enemy, Orb, Player, Portal, Projectile, Campfire, Ember, ShopNpc};
-use crate::resources::level::Level;
+use crate::{effects::*, objects::*, resources::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;
@@ -48,13 +44,20 @@ pub fn draw_resource_bar(terminal_query: &mut Query<&mut Terminal>, config: Reso
         let formatted_name_length = formatted_resource_name.len();
         let formatted_bar_position = config.bar_x_position + formatted_name_length;
         if config.bar_length + formatted_bar_position <= terminal.size()[0] as usize {
-            terminal.put_string([config.bar_x_position, config.bar_y_position], formatted_resource_name);
+            terminal.put_string(
+                [config.bar_x_position, config.bar_y_position],
+                formatted_resource_name,
+            );
             terminal.put_string([formatted_bar_position, config.bar_y_position], bar_ts);
         }
     }
 }
 
-pub fn draw_survival_timer(terminal_query: &mut Query<&mut Terminal>, seconds_survived: f32, ruleset: &Ruleset) {
+pub fn draw_survival_timer(
+    terminal_query: &mut Query<&mut Terminal>,
+    seconds_survived: f32,
+    ruleset: &Ruleset,
+) {
     if let Ok(mut terminal) = terminal_query.single_mut() {
         let timer_text = if seconds_survived >= ruleset.portal_spawn_time {
             "Portal Available".to_string()
@@ -64,11 +67,11 @@ pub fn draw_survival_timer(terminal_query: &mut Query<&mut Terminal>, seconds_su
         let text_length = timer_text.len() as i32;
         let terminal_width = terminal.size()[0] as i32;
         let x_position = (terminal_width - text_length) / 2;
-        
         let x_position = std::cmp::max(0, x_position) as usize;
-        
+
         let mut timer_ts = TerminalString::from(timer_text);
-        timer_ts.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
+        timer_ts.decoration.fg_color =
+            Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
         terminal.put_string([x_position, 0], timer_ts);
     }
 }
@@ -224,19 +227,20 @@ pub fn draw_scene(
                 terminal.put_string([draw_position.x, draw_position.y], portal_char);
             }
         }
-        
         // draw campfire
         for campfire in campfire_query.iter() {
             let world_position = campfire.position + camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
-            
             let wood_position = IVec2::new(draw_position.x, draw_position.y + 1);
-            if terminal.size().contains_point([wood_position.x, wood_position.y]) {
+            if terminal
+                .size()
+                .contains_point([wood_position.x, wood_position.y])
+            {
                 let mut wood_char = TerminalString::from("=");
-                wood_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(0.5, 0.25, 0.0))); // Brown
+                wood_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgb(0.5, 0.25, 0.0))); // Brown
                 terminal.put_string([wood_position.x, wood_position.y], wood_char);
             }
-            
             if terminal
                 .size()
                 .contains_point([draw_position.x, draw_position.y])
@@ -247,32 +251,32 @@ pub fn draw_scene(
                 terminal.put_string([draw_position.x, draw_position.y], campfire_char);
             }
         }
-        
+
         for ember in ember_query.iter() {
             let world_position = ember.position + camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
-            
+
             if terminal
                 .size()
                 .contains_point([draw_position.x, draw_position.y])
             {
                 let mut ember_char = TerminalString::from(".");
-                ember_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(1.0, 0.5, 0.0)));
+                ember_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgb(1.0, 0.5, 0.0)));
                 terminal.put_string([draw_position.x, draw_position.y], ember_char);
             }
         }
-        
         // draw shop npcs
         for shop_npc in shop_npc_query.iter() {
             let world_position = shop_npc.position + camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
-            
             if terminal
                 .size()
                 .contains_point([draw_position.x, draw_position.y])
             {
                 let mut npc_char = TerminalString::from("S");
-                npc_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(0.0, 1.0, 1.0)));
+                npc_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgb(0.0, 1.0, 1.0)));
                 terminal.put_string([draw_position.x, draw_position.y], npc_char);
             }
         }
@@ -306,7 +310,6 @@ pub fn draw_scene(
                 },
             );
         }
-        
         if matches!(level.as_ref(), Level::Survival) {
             draw_survival_timer(terminal_query, seconds_survived, ruleset);
         }
