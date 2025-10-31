@@ -1,4 +1,5 @@
 mod effects;
+mod maps;
 mod objects;
 mod resources;
 mod systems;
@@ -32,7 +33,7 @@ fn main() {
             OnEnter(GameState::FadingIn),
             (reset_fade_timer, play_start_sound).chain(),
         )
-        .add_systems(OnEnter(GameState::Game), (setup_game, play_theme).chain())
+        .add_systems(OnEnter(GameState::Game), (setup_game, play_theme, maps::map::load_map_system).chain())
         .add_systems(
             OnEnter(GameState::LevelTransition),
             (setup_level_transition, despawn_portals).chain(),
