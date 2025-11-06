@@ -7,7 +7,7 @@ use crate::systems::cleanup::despawn_portals;
 use crate::{
     effects::*,
     objects::{
-        interaction::{Interaction, InteractionType},
+        interaction::{InteractionType},
         *,
     },
     resources::*,
