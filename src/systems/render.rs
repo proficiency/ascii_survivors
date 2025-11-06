@@ -1,4 +1,6 @@
-use crate::{effects::*, objects::*, resources::*};
+use crate::{objects::*, resources::*};
+use crate::effects::Fireball as FireballEffect;
+use crate::StatusEffect;
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;
@@ -81,6 +83,7 @@ pub fn render_system(
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
     projectile_query: Query<&Projectile>,
+    fireball_query: Query<&Projectile, With<Fireball>>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
     campfire_query: Query<&Campfire>,
@@ -97,6 +100,7 @@ pub fn render_system(
         enemy_query,
         boss_query,
         projectile_query,
+        fireball_query,
         orb_query,
         portal_query,
         campfire_query,
@@ -115,6 +119,7 @@ pub fn draw_scene(
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
     projectile_query: Query<&Projectile>,
+    fireball_query: Query<&Projectile, With<Fireball>>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
     campfire_query: Query<&Campfire>,
@@ -180,7 +185,7 @@ pub fn draw_scene(
             }
         }
 
-        // draw projectiles
+        // draw normal projectiles
         for projectile in projectile_query.iter() {
             let world_position = projectile.position + camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
@@ -194,6 +199,23 @@ pub fn draw_scene(
                 projectile_char.decoration.fg_color =
                     Some(LinearRgba::from(Color::linear_rgba(1.0, 0.7, 0.0, 1.0)));
                 terminal.put_string([draw_position.x, draw_position.y], projectile_char);
+            }
+        }
+
+        // draw fireballs
+        for fireball in fireball_query.iter() {
+            let world_position = fireball.position + camera_offset.0;
+            let draw_position = world_to_screen(world_position, terminal_size);
+
+            // ensure fireball is within our viewport before drawing it
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
+                let mut fireball_char = TerminalString::from("@");
+                fireball_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgb(1.0, 0.3, 0.0)));
+                terminal.put_string([draw_position.x, draw_position.y], fireball_char);
             }
         }
 
@@ -238,7 +260,7 @@ pub fn draw_scene(
             {
                 let mut wood_char = TerminalString::from("=");
                 wood_char.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgb(0.5, 0.25, 0.0))); // Brown
+                    Some(LinearRgba::from(Color::linear_rgb(0.5, 0.25, 0.0))); // brown
                 terminal.put_string([wood_position.x, wood_position.y], wood_char);
             }
             if terminal
@@ -266,6 +288,7 @@ pub fn draw_scene(
                 terminal.put_string([draw_position.x, draw_position.y], ember_char);
             }
         }
+
         // draw shop npcs
         for shop_npc in shop_npc_query.iter() {
             let world_position = shop_npc.position + camera_offset.0;

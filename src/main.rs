@@ -1,6 +1,7 @@
 mod effects;
 mod objects;
 mod resources;
+mod spells;
 mod systems;
 
 use crate::systems::cleanup::despawn_portals;
@@ -11,6 +12,7 @@ use crate::{
         *,
     },
     resources::*,
+    spells::*,
     systems::*,
 };
 use bevy::{prelude::*, window::*};
@@ -35,6 +37,7 @@ fn main() {
         .init_state::<GameState>()
         .add_audio_channel::<Music>()
         .add_audio_channel::<Sfx>()
+        .insert_resource(crate::systems::spell_casting::SpellInputTimer::default())
         .add_systems(Startup, (setup, setup_resources, list_gamepads).chain())
         .add_systems(OnEnter(GameState::Loading), show_window)
         .add_systems(
@@ -83,7 +86,9 @@ fn main() {
                         .chain(),
                     update_status_effect,
                     death_detection_system,
+                    spell_casting_system,
                     systems::render::render_system,
+                    spell_render_system,
                     render_message_system,
                     render_portal_transition,
                     despawn_entities,
@@ -156,7 +161,8 @@ fn setup(mut commands: Commands) {
 
 fn setup_game(mut commands: Commands, player_query: Query<&Player>) {
     if player_query.is_empty() {
-        commands.spawn((Player::new(IVec2::new(40, 25)), Transform::default()));
+        let mut player = Player::new(IVec2::new(40, 25));
+        commands.spawn((player, Transform::default()));
     }
 }
 

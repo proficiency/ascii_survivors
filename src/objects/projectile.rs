@@ -20,6 +20,9 @@ pub struct Projectile {
     pub speed: f32,
 }
 
+#[derive(Component)]
+pub struct Fireball;
+
 pub fn auto_cast(
     mut commands: Commands,
     player_query: Query<&Player>,

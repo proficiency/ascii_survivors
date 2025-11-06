@@ -29,3 +29,4 @@ pub use player_movement::*;
 pub use portal_spawn::*;
 pub use portal_transition::*;
 pub use shop_npc_spawn::*;
+pub use spell_casting::*;
