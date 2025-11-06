@@ -1,9 +1,9 @@
-use bevy::prelude::*;
 use crate::objects::boss::Boss;
 use crate::objects::enemy::Enemy;
 use crate::objects::player::Player;
 use crate::resources::scene_lock::SceneLock;
 use crate::spells::arcanum::SpellType;
+use bevy::prelude::*;
 use bevy_ascii_terminal::Terminal;
 #[derive(Resource)]
 pub struct SpellInputTimer(pub Timer);

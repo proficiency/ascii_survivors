@@ -7,10 +7,7 @@ mod systems;
 use crate::systems::cleanup::despawn_portals;
 use crate::{
     effects::*,
-    objects::{
-        interaction::{InteractionType},
-        *,
-    },
+    objects::{interaction::InteractionType, *},
     resources::*,
     spells::*,
     systems::*,

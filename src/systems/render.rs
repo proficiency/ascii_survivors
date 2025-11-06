@@ -1,6 +1,6 @@
-use crate::{objects::*, resources::*};
-use crate::effects::Fireball as FireballEffect;
 use crate::StatusEffect;
+use crate::effects::Fireball as FireballEffect;
+use crate::{objects::*, resources::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;

@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::spells::Arcanum;
+use bevy::prelude::*;
 
 pub fn experience_for_level(level: u32) -> u32 {
     (100.0 * (level as f32).powf(1.5)) as u32
