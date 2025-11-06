@@ -53,6 +53,7 @@ impl Arcanum {
                         crate::objects::projectile::Projectile {
                             position: player_pos,
                             target,
+                            target_last_position: None,
                             damage: 25.0,
                             speed: 1.15,
                         },
@@ -68,6 +69,7 @@ impl Arcanum {
                     commands.spawn((crate::objects::projectile::Projectile {
                         position: player_pos,
                         target,
+                        target_last_position: None,
                         damage: 15.0,
                         speed: 2.0,
                     },));
