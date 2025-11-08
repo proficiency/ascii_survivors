@@ -8,9 +8,10 @@ use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
 use crate::resources::timers::ProjectileCooldownTimer;
 use crate::systems::cleanup::Despawn;
+use crate::CameraOffset;
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
-use bevy_kira_audio::{AudioChannel, AudioControl};
+use bevy_kira_audio::prelude::*;
 
 #[derive(Component)]
 pub struct Projectile {
@@ -115,6 +116,7 @@ pub fn process_projectiles(
                     target_exists = true;
                     projectile.position += (direction * speed).as_ivec2();
                 }
+              
                 // we can't find an enemy, but are there any bosses?
                 else if let Ok(target_boss) = boss_query.get(target_entity) {
                     projectile.target_last_position = Some(target_boss.get_head_position());

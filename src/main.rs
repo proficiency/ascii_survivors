@@ -1,4 +1,5 @@
 mod effects;
+mod maps;
 mod objects;
 mod resources;
 mod spells;
@@ -41,7 +42,7 @@ fn main() {
             OnEnter(GameState::FadingIn),
             (reset_fade_timer, play_start_sound).chain(),
         )
-        .add_systems(OnEnter(GameState::Game), (setup_game, play_theme).chain())
+        .add_systems(OnEnter(GameState::Game), (setup_game, play_theme, maps::map::load_map_system).chain())
         .add_systems(
             OnEnter(GameState::LevelTransition),
             (setup_level_transition, despawn_portals).chain(),
@@ -96,6 +97,16 @@ fn main() {
                     .chain()
                     .run_if(in_state(GameState::Game)),
                 (level_transition_system, level_transition_render_system)
+                    .run_if(in_state(GameState::LevelTransition)),
+                (
+                    heal_player_system,
+                )
+                    .chain()
+                    .run_if(in_state(GameState::Game)),
+                (
+                    level_transition_system,
+                    level_transition_render_system,
+                )
                     .run_if(in_state(GameState::LevelTransition)),
                 (
                     game_over_input_system,
@@ -400,6 +411,7 @@ fn setup_level_transition(
     for entity in orb_query.iter() {
         commands.entity(entity).despawn();
     }
+
     if let Ok(mut player) = player_query.single_mut() {
         player.position = IVec2::new(40, 25);
         player.world_position = IVec2::new(40, 25);

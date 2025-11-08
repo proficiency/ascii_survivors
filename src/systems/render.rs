@@ -1,6 +1,4 @@
-use crate::StatusEffect;
-use crate::effects::Fireball as FireballEffect;
-use crate::{objects::*, resources::*};
+use crate::{objects::*, resources::*, effects::*, maps::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;
@@ -94,6 +92,7 @@ pub fn render_system(
     survival_timer: Res<SurvivalTimer>,
     ruleset: Res<Ruleset>,
     level: Res<Level>,
+    map: Option<Res<Map>>,
 ) {
     draw_scene(
         player_query,
@@ -111,7 +110,32 @@ pub fn render_system(
         survival_timer.0.elapsed_secs(),
         &ruleset,
         level,
+        map,
     );
+}
+
+fn draw_map(
+    terminal: &mut Terminal,
+    map: &Map,
+    camera_offset: IVec2,
+    terminal_size: UVec2,
+) {
+    for x in 0..map.width {
+        for y in 0..map.height {
+            let world_position = IVec2::new(x as i32, y as i32) - camera_offset;
+            let draw_position = world_to_screen(world_position, terminal_size);
+            
+            if terminal.size().contains_point([draw_position.x, draw_position.y]) {
+                if let Some(tile) = map.get_tile(x as i32, y as i32) {
+                    if tile.explored {
+                        let mut tile_char = TerminalString::from(tile.tile_type.to_char().to_string());
+                        tile_char.decoration.fg_color = Some(LinearRgba::from(tile.tile_type.to_color()));
+                        terminal.put_string([draw_position.x, draw_position.y], tile_char);
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn draw_scene(
@@ -130,11 +154,16 @@ pub fn draw_scene(
     seconds_survived: f32,
     ruleset: &Ruleset,
     level: Res<Level>,
+    map: Option<Res<Map>>,
 ) {
     if let Ok(mut terminal) = terminal_query.single_mut() {
         terminal.clear();
 
         let terminal_size = terminal.size();
+
+      if let Some(map) = map {
+            draw_map(&mut terminal, &map, camera_offset.0, terminal_size);
+        }
 
         // draw orbs
         for orb in orb_query.iter() {
@@ -249,6 +278,7 @@ pub fn draw_scene(
                 terminal.put_string([draw_position.x, draw_position.y], portal_char);
             }
         }
+
         // draw campfire
         for campfire in campfire_query.iter() {
             let world_position = campfire.position + camera_offset.0;
@@ -333,7 +363,8 @@ pub fn draw_scene(
                 },
             );
         }
-        if matches!(level.as_ref(), Level::Survival) {
+
+      if matches!(level.as_ref(), Level::Survival) {
             draw_survival_timer(terminal_query, seconds_survived, ruleset);
         }
     }

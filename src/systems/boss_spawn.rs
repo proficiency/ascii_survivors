@@ -15,12 +15,11 @@ pub fn spawn_bosses(
     camera_offset: Res<CameraOffset>,
     game_state: Res<State<GameState>>,
 ) {
-    if survival_timer.0.elapsed_secs() >= ruleset.portal_spawn_time
-        || *game_state.get() == GameState::LevelTransition
-    {
+    if survival_timer.0.elapsed_secs() >= ruleset.portal_spawn_time 
+        || *game_state.get() == GameState::LevelTransition {
         return;
     }
-
+    
     if let Ok(terminal) = terminal_query.single() {
         timer.0.tick(time.delta());
         if timer.0.finished() {
