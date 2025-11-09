@@ -1,7 +1,7 @@
 # ascii_survivors
 _Survive, but in ASCII!_
 
-![IMG](https://imgur.com/d52TLY1.gif)
+![IMG](https://i.imgur.com/g57UuFa.gif)
 
 ## About
 Roguelike survivors-like game with a classic medieval fantasy theme — written in Rust with [Bevy](https://bevy.org/) 
