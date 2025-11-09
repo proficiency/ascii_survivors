@@ -3,10 +3,10 @@ use bevy_ascii_terminal::*;
 use rand::Rng;
 
 use crate::objects::enemy::Enemy;
+use crate::resources::GameState;
 use crate::resources::camera::CameraOffset;
 use crate::resources::timers::{EnemySpawnTimer, SurvivalTimer};
 use crate::resources::ruleset::Ruleset;
-use crate::resources::GameState;
 
 pub fn spawn_enemies(
     mut commands: Commands,

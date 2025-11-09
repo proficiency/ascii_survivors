@@ -17,7 +17,7 @@ impl Ember {
             lifetime: Timer::from_seconds(lifetime, TimerMode::Once),
         }
     }
-    
+
     pub fn update(&mut self, time: &Time) {
         self.lifetime.tick(time.delta());
         self.velocity += self.gravity;

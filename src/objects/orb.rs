@@ -1,4 +1,4 @@
-use crate::{objects::*, systems::Despawn, resources::*};
+use crate::{objects::*, resources::*, systems::Despawn};
 use bevy::prelude::*;
 
 #[derive(Component)]

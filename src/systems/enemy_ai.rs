@@ -48,9 +48,8 @@ pub fn enemy_ai(
                 let distance = distance_vec.length();
 
                 if distance < SEPARATION_RADIUS && distance > 0.0 {
-                    let repulsion_strength = SEPARATION_STRENGTH
-                        * (SEPARATION_RADIUS - distance)
-                        / SEPARATION_RADIUS;
+                    let repulsion_strength =
+                        SEPARATION_STRENGTH * (SEPARATION_RADIUS - distance) / SEPARATION_RADIUS;
                     separation_force += distance_vec.normalize() * repulsion_strength;
                 }
             }

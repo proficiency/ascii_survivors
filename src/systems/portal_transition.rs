@@ -9,7 +9,7 @@ pub fn portal_transition_system(
     mut level: ResMut<Level>,
     player_query: Query<&Player>,
     portal_query: Query<&Portal>,
-    audio: Res<AudioChannel<Music>>
+    audio: Res<AudioChannel<Music>>,
 ) {
     if let Ok(player) = player_query.single() {
         let mut player_near_portal = false;
@@ -40,9 +40,8 @@ pub fn portal_transition_system(
 
                         *level = match level.as_ref() {
                             Level::Survival => Level::Rest,
-                            Level::Rest => Level::Grassland,
-                            Level::Grassland => Level::Dungeon,
-                            Level::Dungeon => Level::Grassland,
+                            Level::Rest => Level::Survival,
+                            Level::Grassland | Level::Dungeon => Level::Rest,
                         };
 
                         if transitioning_to_rest {
@@ -96,25 +95,21 @@ pub fn render_portal_transition(
 
     if let (Ok(mut terminal), Ok(player)) = (query.single_mut(), player_query.single()) {
         let screen_pos = player.world_position + camera_offset.0;
-
-        if screen_pos.x >= 0 && screen_pos.x < 80 && screen_pos.y >= 0 && screen_pos.y < 50 {
-            let radius = (portal_transition.progress * 3.0) as i32;
-
-            for dy in -radius..=radius {
-                for dx in -radius..=radius {
-                    let distance = ((dx * dx + dy * dy) as f32).sqrt();
-                    if distance <= radius as f32 && distance >= (radius - 1) as f32 {
-                        let x = screen_pos.x + dx;
-                        let y = screen_pos.y + dy;
-                        if x >= 0 && x < 80 && y >= 0 && y < 50 {
-                            let char = match portal_transition.progress {
-                                p if p < 0.25 => '░',
-                                p if p < 0.5 => '▒',
-                                p if p < 0.75 => '▓',
-                                _ => '█',
-                            };
-                            terminal.put_char([x as usize, y as usize], char);
-                        }
+        let radius = (portal_transition.progress * 20.0) as i32;
+        for dy in -radius..=radius {
+            for dx in -radius..=radius {
+                let distance = ((dx * dx + dy * dy) as f32).sqrt();
+                if distance <= radius as f32 && distance >= (radius - 1) as f32 {
+                    let x = screen_pos.x + dx;
+                    let y = screen_pos.y + dy;
+                    if x >= 0 && x < 80 && y >= 0 && y < 50 {
+                        let char = match portal_transition.progress {
+                            p if p < 0.25 => '░',
+                            p if p < 0.5 => '▒',
+                            p if p < 0.75 => '▓',
+                            _ => '█',
+                        };
+                        terminal.put_char([x as usize, y as usize], char);
                     }
                 }
             }

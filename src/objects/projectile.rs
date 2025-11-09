@@ -2,9 +2,9 @@ use crate::objects::boss::Boss;
 use crate::objects::enemy::Enemy;
 use crate::objects::orb::Orb;
 use crate::objects::player::Player;
+use crate::resources::channels::*;
 use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
-use crate::resources::channels::*;
 use crate::resources::timers::ProjectileCooldownTimer;
 use crate::systems::cleanup::Despawn;
 use crate::CameraOffset;
@@ -16,9 +16,13 @@ use bevy_kira_audio::prelude::*;
 pub struct Projectile {
     pub position: IVec2,
     pub target: Option<Entity>,
+    pub target_last_position: Option<IVec2>,
     pub damage: f32,
     pub speed: f32,
 }
+
+#[derive(Component)]
+pub struct Fireball;
 
 pub fn auto_cast(
     mut commands: Commands,
@@ -43,7 +47,7 @@ pub fn auto_cast(
         for (enemy_entity, enemy) in enemy_query.iter() {
             let enemy_world_pos = enemy.position;
             let player_world_pos = player.world_position;
-            
+
             let distance = (enemy_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
                 min_distance = distance;
@@ -54,7 +58,7 @@ pub fn auto_cast(
         for (boss_entity, boss) in boss_query.iter() {
             let boss_world_pos = boss.get_head_position();
             let player_world_pos = player.world_position;
-            
+
             let distance = (boss_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
                 min_distance = distance;
@@ -70,6 +74,7 @@ pub fn auto_cast(
                 commands.spawn((Projectile {
                     position: player_position,   // spawn at player origin
                     target: Some(target_entity), // travel towards a target
+                    target_last_position: None,  // no last position yet
                     damage: 25.0,                // do some damage
                     speed: 1.65,                 // travel slowly
                 },));
@@ -101,6 +106,8 @@ pub fn process_projectiles(
 
             if let Some(target_entity) = projectile.target {
                 if let Ok(target_enemy) = enemy_query.get(target_entity) {
+                    projectile.target_last_position = Some(target_enemy.position);
+                    
                     let direction = (target_enemy.position - projectile.position)
                         .as_vec2()
                         .normalize_or_zero();
@@ -108,8 +115,11 @@ pub fn process_projectiles(
                     target_exists = true;
                     projectile.position += (direction * speed).as_ivec2();
                 }
-                // we can't find an enemy, but are there any bosses?    
+              
+                // we can't find an enemy, but are there any bosses?
                 else if let Ok(target_boss) = boss_query.get(target_entity) {
+                    projectile.target_last_position = Some(target_boss.get_head_position());
+                    
                     let direction = (target_boss.get_head_position() - projectile.position)
                         .as_vec2()
                         .normalize_or_zero();
@@ -117,9 +127,24 @@ pub fn process_projectiles(
                     target_exists = true;
                     projectile.position += (direction * speed).as_ivec2();
                 }
+                else if projectile.target_last_position.is_some() {
+                    let last_position = projectile.target_last_position.unwrap();
+                    let direction = (last_position - projectile.position)
+                        .as_vec2()
+                        .normalize_or_zero();
+                        
+                    projectile.position += (direction * speed).as_ivec2();
+                    
+                    if projectile.position == last_position {
+                        target_exists = false;
+                    } else {
+                        target_exists = true;
+                    }
+                }
             }
 
             // ensure the projectile is despawned if the target is dead or there was no valid target
+            // and we've reached the last known position
             if !target_exists {
                 commands.entity(entity).insert(Despawn);
             }
@@ -167,7 +192,7 @@ pub fn process_collisions(
                 commands.entity(projectile_entity).insert(Despawn);
             }
         }
-        
+
         for (boss_entity, mut boss) in boss_query.iter_mut() {
             for (segment_index, segment) in boss.segments.iter().enumerate() {
                 if projectile.position == segment.position {
@@ -179,7 +204,7 @@ pub fn process_collisions(
                         commands.entity(boss_entity).insert(Despawn);
                         kill_count.enemies += 1;
                     }
-                    
+
                     commands.entity(projectile_entity).insert(Despawn);
                     break; // ensure a projectile can only damage one segment at a time
                 }

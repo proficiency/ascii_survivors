@@ -2,9 +2,17 @@ mod effects;
 mod maps;
 mod objects;
 mod resources;
+mod spells;
 mod systems;
 
-use crate::{effects::*, objects::*, resources::*, systems::*};
+use crate::systems::cleanup::despawn_portals;
+use crate::{
+    effects::*,
+    objects::{interaction::InteractionType, *},
+    resources::*,
+    spells::*,
+    systems::*,
+};
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
 use bevy_kira_audio::prelude::*;
@@ -27,6 +35,7 @@ fn main() {
         .init_state::<GameState>()
         .add_audio_channel::<Music>()
         .add_audio_channel::<Sfx>()
+        .insert_resource(crate::systems::spell_casting::SpellInputTimer::default())
         .add_systems(Startup, (setup, setup_resources, list_gamepads).chain())
         .add_systems(OnEnter(GameState::Loading), show_window)
         .add_systems(
@@ -75,13 +84,20 @@ fn main() {
                         .chain(),
                     update_status_effect,
                     death_detection_system,
+                    spell_casting_system,
                     systems::render::render_system,
+                    spell_render_system,
                     render_message_system,
                     render_portal_transition,
                     despawn_entities,
                 )
                     .chain()
                     .run_if(in_state(GameState::Game)),
+                (heal_player_system,)
+                    .chain()
+                    .run_if(in_state(GameState::Game)),
+                (level_transition_system, level_transition_render_system)
+                    .run_if(in_state(GameState::LevelTransition)),
                 (
                     heal_player_system,
                 )
@@ -153,7 +169,8 @@ fn setup(mut commands: Commands) {
 
 fn setup_game(mut commands: Commands, player_query: Query<&Player>) {
     if player_query.is_empty() {
-        commands.spawn((Player::new(IVec2::new(40, 25)), Transform::default()));
+        let mut player = Player::new(IVec2::new(40, 25));
+        commands.spawn((player, Transform::default()));
     }
 }
 
@@ -422,7 +439,6 @@ fn level_transition_system(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     transition_timer.0.tick(time.delta());
-
     if transition_timer.0.finished() {
         next_state.set(GameState::Game);
         transition_timer.0.reset();

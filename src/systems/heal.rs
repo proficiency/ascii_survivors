@@ -1,4 +1,4 @@
-use crate::{objects::*, resources::*, effects::*};
+use crate::{effects::*, objects::*, resources::*};
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 

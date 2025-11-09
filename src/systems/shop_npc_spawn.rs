@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use bevy_ascii_terminal::Terminal;
 
-use crate::{objects::{ShopNpc, Interaction, InteractionType}, resources::*};
+use crate::{
+    objects::{Interaction, InteractionType, ShopNpc},
+    resources::*,
+};
 
 /// margin to ensure the shop npcs spawn away from the edges of the screen
 const SHOP_NPC_SPAWN_MARGIN: i32 = 2;

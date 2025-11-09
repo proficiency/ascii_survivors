@@ -1,4 +1,4 @@
-use crate::{objects::*, resources::*, effects::*, maps::*};
+use crate::{objects::*, resources::*, maps::*, effects::StatusEffect};
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;
@@ -81,6 +81,7 @@ pub fn render_system(
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
     projectile_query: Query<&Projectile>,
+    fireball_query: Query<&Projectile, With<Fireball>>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
     campfire_query: Query<&Campfire>,
@@ -98,6 +99,7 @@ pub fn render_system(
         enemy_query,
         boss_query,
         projectile_query,
+        fireball_query,
         orb_query,
         portal_query,
         campfire_query,
@@ -112,7 +114,6 @@ pub fn render_system(
     );
 }
 
-/// Draws the map tiles to the terminal
 fn draw_map(
     terminal: &mut Terminal,
     map: &Map,
@@ -121,14 +122,11 @@ fn draw_map(
 ) {
     for x in 0..map.width {
         for y in 0..map.height {
-            // Convert world coordinates to screen coordinates
             let world_position = IVec2::new(x as i32, y as i32) - camera_offset;
             let draw_position = world_to_screen(world_position, terminal_size);
             
-            // Check if the tile is within the terminal bounds
             if terminal.size().contains_point([draw_position.x, draw_position.y]) {
                 if let Some(tile) = map.get_tile(x as i32, y as i32) {
-                    // Only draw explored tiles
                     if tile.explored {
                         let mut tile_char = TerminalString::from(tile.tile_type.to_char().to_string());
                         tile_char.decoration.fg_color = Some(LinearRgba::from(tile.tile_type.to_color()));
@@ -145,6 +143,7 @@ pub fn draw_scene(
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
     projectile_query: Query<&Projectile>,
+    fireball_query: Query<&Projectile, With<Fireball>>,
     orb_query: Query<&Orb>,
     portal_query: Query<&Portal>,
     campfire_query: Query<&Campfire>,
@@ -162,8 +161,7 @@ pub fn draw_scene(
 
         let terminal_size = terminal.size();
 
-        // Draw map if available
-        if let Some(map) = map {
+      if let Some(map) = map {
             draw_map(&mut terminal, &map, camera_offset.0, terminal_size);
         }
 
@@ -216,7 +214,7 @@ pub fn draw_scene(
             }
         }
 
-        // draw projectiles
+        // draw normal projectiles
         for projectile in projectile_query.iter() {
             let world_position = projectile.position + camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
@@ -230,6 +228,23 @@ pub fn draw_scene(
                 projectile_char.decoration.fg_color =
                     Some(LinearRgba::from(Color::linear_rgba(1.0, 0.7, 0.0, 1.0)));
                 terminal.put_string([draw_position.x, draw_position.y], projectile_char);
+            }
+        }
+
+        // draw fireballs
+        for fireball in fireball_query.iter() {
+            let world_position = fireball.position + camera_offset.0;
+            let draw_position = world_to_screen(world_position, terminal_size);
+
+            // ensure fireball is within our viewport before drawing it
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
+                let mut fireball_char = TerminalString::from("@");
+                fireball_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgb(1.0, 0.3, 0.0)));
+                terminal.put_string([draw_position.x, draw_position.y], fireball_char);
             }
         }
 
@@ -269,12 +284,15 @@ pub fn draw_scene(
             let world_position = campfire.position + camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
             let wood_position = IVec2::new(draw_position.x, draw_position.y + 1);
-            if terminal.size().contains_point([wood_position.x, wood_position.y]) {
+            if terminal
+                .size()
+                .contains_point([wood_position.x, wood_position.y])
+            {
                 let mut wood_char = TerminalString::from("=");
-                wood_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(0.5, 0.25, 0.0))); // Brown
+                wood_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgb(0.5, 0.25, 0.0))); // brown
                 terminal.put_string([wood_position.x, wood_position.y], wood_char);
             }
-
             if terminal
                 .size()
                 .contains_point([draw_position.x, draw_position.y])
@@ -295,7 +313,8 @@ pub fn draw_scene(
                 .contains_point([draw_position.x, draw_position.y])
             {
                 let mut ember_char = TerminalString::from(".");
-                ember_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(1.0, 0.5, 0.0)));
+                ember_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgb(1.0, 0.5, 0.0)));
                 terminal.put_string([draw_position.x, draw_position.y], ember_char);
             }
         }
@@ -309,7 +328,8 @@ pub fn draw_scene(
                 .contains_point([draw_position.x, draw_position.y])
             {
                 let mut npc_char = TerminalString::from("S");
-                npc_char.decoration.fg_color = Some(LinearRgba::from(Color::linear_rgb(0.0, 1.0, 1.0)));
+                npc_char.decoration.fg_color =
+                    Some(LinearRgba::from(Color::linear_rgb(0.0, 1.0, 1.0)));
                 terminal.put_string([draw_position.x, draw_position.y], npc_char);
             }
         }
@@ -344,7 +364,7 @@ pub fn draw_scene(
             );
         }
 
-        if matches!(level.as_ref(), Level::Survival) {
+      if matches!(level.as_ref(), Level::Survival) {
             draw_survival_timer(terminal_query, seconds_survived, ruleset);
         }
     }
