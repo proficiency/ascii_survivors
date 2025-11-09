@@ -1,4 +1,4 @@
-use crate::{objects::*, resources::*, effects::*, maps::*};
+use crate::{objects::*, resources::*, maps::*, effects::StatusEffect};
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;

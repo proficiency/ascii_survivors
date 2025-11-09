@@ -41,6 +41,7 @@ pub fn portal_transition_system(
                         *level = match level.as_ref() {
                             Level::Survival => Level::Rest,
                             Level::Rest => Level::Survival,
+                            Level::Grassland | Level::Dungeon => Level::Rest,
                         };
 
                         if transitioning_to_rest {

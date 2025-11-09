@@ -5,4 +5,6 @@ pub enum Level {
     #[default]
     Survival,
     Rest,
+    Grassland,
+    Dungeon,
 }

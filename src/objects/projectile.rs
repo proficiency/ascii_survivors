@@ -2,7 +2,6 @@ use crate::objects::boss::Boss;
 use crate::objects::enemy::Enemy;
 use crate::objects::orb::Orb;
 use crate::objects::player::Player;
-use crate::resources::camera::CameraOffset;
 use crate::resources::channels::*;
 use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
