@@ -1,10 +1,11 @@
+use crate::spells::Arcanum;
 use bevy::prelude::*;
 
 pub fn experience_for_level(level: u32) -> u32 {
     (100.0 * (level as f32).powf(1.5)) as u32
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Player {
     pub health: f32,
     pub max_health: f32,
@@ -14,6 +15,7 @@ pub struct Player {
     pub experience: u32,
     pub level: u32,
     pub experience_to_next_level: u32,
+    pub arcanum: Arcanum,
 }
 
 impl Player {
@@ -27,6 +29,7 @@ impl Player {
             experience: 0,
             level: 1,
             experience_to_next_level: experience_for_level(1),
+            arcanum: Arcanum::new(),
         }
     }
 }

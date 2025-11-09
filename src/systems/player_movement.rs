@@ -73,11 +73,15 @@ pub fn player_movement(
             let new_x = (player.position.x + move_offset.x).clamp(0, size[0] as i32 - 1);
             let new_y = (player.position.y - move_offset.y).clamp(0, size[1] as i32 - 1); // Corrected Y-axis movement
             player.position = IVec2::new(new_x, new_y);
-            player.world_position = IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y) - camera_offset.0;
+            player.world_position =
+                IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
+                    - camera_offset.0;
         } else {
             camera_offset.0 -= move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
             player.position = IVec2::new(center_x, center_y);
-            player.world_position = IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y) - camera_offset.0;
+            player.world_position =
+                IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
+                    - camera_offset.0;
         }
     }
 }

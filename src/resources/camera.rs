@@ -1,4 +1,4 @@
 use bevy::prelude::*;
 
-#[derive(Resource)]
+#[derive(Resource, Component)]
 pub struct CameraOffset(pub IVec2);
