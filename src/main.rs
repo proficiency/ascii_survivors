@@ -5,14 +5,14 @@ mod resources;
 mod spells;
 mod systems;
 
-use crate::systems::cleanup::despawn_portals;
 use crate::{
     effects::*,
     objects::{interaction::InteractionType, *},
     resources::*,
-    spells::*,
     systems::*,
+    spells::*,
 };
+
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
 use bevy_kira_audio::prelude::*;
@@ -42,7 +42,10 @@ fn main() {
             OnEnter(GameState::FadingIn),
             (reset_fade_timer, play_start_sound).chain(),
         )
-        .add_systems(OnEnter(GameState::Game), (setup_game, play_theme, maps::map::load_map_system).chain())
+        .add_systems(
+            OnEnter(GameState::Game),
+            (setup_game, play_theme, maps::map::load_map_system).chain(),
+        )
         .add_systems(
             OnEnter(GameState::LevelTransition),
             (setup_level_transition, despawn_portals).chain(),
@@ -75,6 +78,7 @@ fn main() {
                         boss_ai,
                         auto_cast,
                         process_projectiles,
+                        process_fireballs,
                         process_collisions,
                         orb_movement,
                         process_orb_collection,
@@ -98,15 +102,10 @@ fn main() {
                     .run_if(in_state(GameState::Game)),
                 (level_transition_system, level_transition_render_system)
                     .run_if(in_state(GameState::LevelTransition)),
-                (
-                    heal_player_system,
-                )
+                (heal_player_system,)
                     .chain()
                     .run_if(in_state(GameState::Game)),
-                (
-                    level_transition_system,
-                    level_transition_render_system,
-                )
+                (level_transition_system, level_transition_render_system)
                     .run_if(in_state(GameState::LevelTransition)),
                 (
                     game_over_input_system,
@@ -170,6 +169,7 @@ fn setup(mut commands: Commands) {
 fn setup_game(mut commands: Commands, player_query: Query<&Player>) {
     if player_query.is_empty() {
         let mut player = Player::new(IVec2::new(40, 25));
+        player.arcanum.learn_spell(SpellType::Fireball);
         commands.spawn((player, Transform::default()));
     }
 }

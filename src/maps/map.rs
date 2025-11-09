@@ -1,8 +1,7 @@
 use crate::maps::tile::{Tile, TileType};
 use bevy::prelude::*;
-use bevy_ascii_terminal::*;
-use std::io::Cursor;
 use rexpaint::*;
+use std::io::Cursor;
 
 #[derive(Resource)]
 pub struct Map {
@@ -91,10 +90,7 @@ impl Map {
     }
 }
 
-pub fn load_map_system(
-    mut commands: Commands,
-    level: Res<crate::resources::level::Level>,
-) {
+pub fn load_map_system(mut commands: Commands, level: Res<crate::resources::level::Level>) {
     // For now, we'll create a simple test map
     // In the future, we'll load actual rexpaint files based on the level
     let map = create_test_map_for_level(*level);
@@ -108,7 +104,7 @@ fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
         crate::resources::level::Level::Rest => "Rest Area",
         crate::resources::level::Level::Survival => "Survival Mode",
     };
-    
+
     let mut map = Map::new(80, 50, map_name.to_string());
 
     // enclose the map in walls, testing purposes
@@ -116,12 +112,12 @@ fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
         map.tiles[x][0] = Tile::wall();
         map.tiles[x][49] = Tile::wall();
     }
-    
+
     for y in 0..50 {
         map.tiles[0][y] = Tile::wall();
         map.tiles[79][y] = Tile::wall();
     }
-    
+
     match level {
         crate::resources::level::Level::Grassland => {
             for x in 10..70 {
@@ -131,7 +127,7 @@ fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
                     }
                 }
             }
-        },
+        }
         crate::resources::level::Level::Dungeon => {
             for x in 25..55 {
                 map.tiles[x][25] = Tile::wall();
@@ -140,11 +136,11 @@ fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
                 map.tiles[30][y] = Tile::wall();
                 map.tiles[50][y] = Tile::wall();
             }
-        },
+        }
         crate::resources::level::Level::Rest => {
             // campfire in the center
             map.tiles[40][25] = Tile::new(TileType::Empty);
-        },
+        }
         crate::resources::level::Level::Survival => {
             for x in 5..75 {
                 for y in 5..45 {
@@ -153,15 +149,15 @@ fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
                     }
                 }
             }
-        },
+        }
     }
-    
+
     // mark all tiles as explored for testing
     for x in 0..map.width {
         for y in 0..map.height {
             map.tiles[x][y].explored = true;
         }
     }
-    
+
     map
 }
