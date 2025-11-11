@@ -92,7 +92,7 @@ pub fn auto_cast(
                     target: Some(target_entity), // travel towards a target
                     target_last_position: None,  // no last position yet
                     damage: 25.0,                // do some damage
-                    speed: 1.65,                 // travel slowly
+                    speed: 85.0,                 // travel slowly
                     lifetime: 3.0,               // lifetime in seconds
                     max_lifetime: 3.0,           // max lifetime in seconds
                 },));
@@ -121,7 +121,6 @@ pub fn process_projectiles(
 
         for (entity, mut projectile) in projectile_query.iter_mut() {
             projectile.lifetime -= time.delta_secs();
-            
             if projectile.lifetime <= 0.0 {
                 commands.entity(entity).insert(Despawn);
                 continue;
@@ -151,13 +150,15 @@ pub fn process_projectiles(
 
                     target_exists = true;
                     projectile.position += (direction * speed).as_ivec2();
-                } else if projectile.target_last_position.is_some() {
+                }
+
+                if projectile.target_last_position.is_some() {
                     let last_position = projectile.target_last_position.unwrap();
                     let direction = (last_position - projectile.position)
                         .as_vec2()
                         .normalize_or_zero();
 
-                    projectile.position += (direction * speed).as_ivec2();
+                    projectile.position += (direction * speed).as_ivec2().clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
 
                     if projectile.position == last_position {
                         target_exists = false;

@@ -55,7 +55,7 @@ impl Arcanum {
                             target,
                             target_last_position: None,
                             damage: 25.0,
-                            speed: 1.15,
+                            speed: 150.0,
                             lifetime: 3.0,
                             max_lifetime: 3.0,
                         },
@@ -73,7 +73,7 @@ impl Arcanum {
                         target,
                         target_last_position: None,
                         damage: 15.0,
-                        speed: 2.0,
+                        speed: 125.0,
                         lifetime: 3.0,
                         max_lifetime: 3.0,
                     },));
