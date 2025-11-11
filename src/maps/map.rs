@@ -107,17 +107,6 @@ fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
 
     let mut map = Map::new(80, 50, map_name.to_string());
 
-    // enclose the map in walls, testing purposes
-    for x in 0..80 {
-        map.tiles[x][0] = Tile::wall();
-        map.tiles[x][49] = Tile::wall();
-    }
-
-    for y in 0..50 {
-        map.tiles[0][y] = Tile::wall();
-        map.tiles[79][y] = Tile::wall();
-    }
-
     match level {
         crate::resources::level::Level::Grassland => {
             for x in 10..70 {
