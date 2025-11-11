@@ -142,13 +142,12 @@ fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
             map.tiles[40][25] = Tile::new(TileType::Empty);
         }
         crate::resources::level::Level::Survival => {
-            for x in 5..75 {
-                for y in 5..45 {
-                    if (x + y) % 5 == 0 {
-                        map.tiles[x][y] = Tile::new(TileType::Stone);
-                    }
-                }
-            }
+            map.tiles[40][20] = Tile::new(TileType::Empty);
+            map.tiles[41][20] = Tile::new(TileType::Wall);
+            map.tiles[42][20] = Tile::new(TileType::Water);
+            map.tiles[43][20] = Tile::new(TileType::Grass);
+            map.tiles[44][20] = Tile::new(TileType::Stone);
+            map.tiles[45][20] = Tile::new(TileType::Door);
         }
     }
 
