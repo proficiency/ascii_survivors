@@ -12,6 +12,8 @@ pub mod player_movement;
 pub mod portal_spawn;
 pub mod portal_transition;
 pub mod render;
+pub mod lighting_overlay;
+pub mod light_flicker;
 pub mod shop_npc_spawn;
 pub mod spell_casting;
 
@@ -28,5 +30,8 @@ pub use message::*;
 pub use player_movement::*;
 pub use portal_spawn::*;
 pub use portal_transition::*;
+pub use render::*;
+pub use lighting_overlay::*;
+pub use light_flicker::*;
 pub use shop_npc_spawn::*;
 pub use spell_casting::*;

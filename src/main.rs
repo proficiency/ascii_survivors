@@ -36,7 +36,10 @@ fn main() {
         .add_audio_channel::<Music>()
         .add_audio_channel::<Sfx>()
         .insert_resource(crate::systems::spell_casting::SpellInputTimer::default())
-        .add_systems(Startup, (setup, setup_resources, list_gamepads).chain())
+        .add_systems(
+            Startup,
+            (setup, setup_resources, list_gamepads, setup_lighting_overlay).chain(),
+        )
         .add_systems(OnEnter(GameState::Loading), show_window)
         .add_systems(
             OnEnter(GameState::FadingIn),
@@ -84,6 +87,7 @@ fn main() {
                         process_orb_collection,
                         campfire_animation_system,
                         ember_animation_system,
+                        light_flicker_system,
                     )
                         .chain(),
                     update_status_effect,
@@ -114,6 +118,12 @@ fn main() {
                 )
                     .run_if(in_state(GameState::GameOver)),
             ),
+        )
+        .add_systems(
+            Update,
+            update_lighting_overlay
+                .after(render_system)
+                .run_if(in_state(GameState::Game)),
         )
         .run();
 }
@@ -426,6 +436,8 @@ fn setup_level_transition(
         commands.spawn((
             Campfire::new(campfire_position),
             crate::objects::Interaction::new(InteractionType::Campfire),
+            LightEmitter::campfire(),
+            LightFlicker::campfire(),
             Transform::from_xyz(campfire_position.x as f32, campfire_position.y as f32, 0.0),
         ));
     } else {
