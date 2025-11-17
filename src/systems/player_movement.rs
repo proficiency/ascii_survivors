@@ -30,10 +30,10 @@ pub fn player_movement(
             const TOLERANCE: f32 = 0.35f32;
 
             if left_stick.y < -TOLERANCE {
-                move_offset.y -= 1;
+                move_offset.y += 1;
             }
             if left_stick.y > TOLERANCE {
-                move_offset.y += 1;
+                move_offset.y -= 1;
             }
             if left_stick.x < -TOLERANCE {
                 move_offset.x -= 1;
@@ -44,10 +44,10 @@ pub fn player_movement(
 
             // D-pad movement
             if gamepad.pressed(GamepadButton::DPadUp) {
-                move_offset.y += 1;
+                move_offset.y -= 1;
             }
             if gamepad.pressed(GamepadButton::DPadDown) {
-                move_offset.y -= 1;
+                move_offset.y += 1;
             }
             if gamepad.pressed(GamepadButton::DPadLeft) {
                 move_offset.x -= 1;
@@ -58,10 +58,10 @@ pub fn player_movement(
         }
 
         if keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::ArrowUp) {
-            move_offset.y += 1;
+            move_offset.y -= 1;
         }
         if keyboard_input.pressed(KeyCode::KeyS) || keyboard_input.pressed(KeyCode::ArrowDown) {
-            move_offset.y -= 1;
+            move_offset.y += 1;
         }
         if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft) {
             move_offset.x -= 1;
@@ -81,17 +81,18 @@ pub fn player_movement(
                             - camera_offset.0;
                 }
             }
-        } else {
-            if let Some(map) = &map {
-                let center = IVec2::new(center_x, center_y)
-                    + move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
-                if map.is_walkable(center_x, center_y) {
-                    camera_offset.0 -= move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
-                    player.position = center;
-                    player.world_position =
-                        IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
-                            - camera_offset.0;
-                }
+        } else if let Some(map) = &map {
+            let clamped = move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
+            let center = IVec2::new(center_x, center_y) + clamped;
+
+            if map.is_walkable(center.x, center.y) {
+                let camera_delta = IVec2::new(clamped.x, -clamped.y);
+                camera_offset.0 -= camera_delta;
+
+                player.position = center;
+                player.world_position =
+                    IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
+                        - camera_offset.0;
             }
         }
     }
