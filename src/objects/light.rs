@@ -25,22 +25,12 @@ impl LightEmitter {
 
     /// Soft glow used while the player explores survival arenas.
     pub fn player_default() -> Self {
-        Self::new(
-            Color::linear_rgba(0.35, 0.55, 1.0, 0.45),
-            6.5,
-            0.8,
-            2.0,
-        )
+        Self::new(Color::linear_rgba(0.35, 0.55, 1.0, 0.45), 6.5, 0.8, 2.0)
     }
 
     /// Warm and wide light emitted by rest area campfires.
     pub fn campfire() -> Self {
-        Self::new(
-            Color::linear_rgba(1.0, 0.62, 0.2, 0.4),
-            13.0,
-            0.85,
-            1.65,
-        )
+        Self::new(Color::linear_rgba(1.0, 0.62, 0.2, 0.4), 13.0, 0.85, 1.65)
     }
 }
 
@@ -75,13 +65,6 @@ impl LightFlicker {
     }
 
     pub fn campfire() -> Self {
-        Self::new(
-            (0.55, 0.95),
-            (11.0, 14.0),
-            0.17,
-            6.0,
-            0.85,
-            13.0,
-        )
+        Self::new((0.55, 0.95), (11.0, 14.0), 0.17, 6.0, 0.85, 13.0)
     }
 }

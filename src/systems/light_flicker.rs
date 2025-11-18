@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rand::{rng, Rng};
+use rand::{Rng, rng};
 
 use crate::objects::{LightEmitter, LightFlicker};
 
@@ -20,11 +20,8 @@ pub fn light_flicker_system(
         }
 
         let delta = time.delta_secs();
-        emitter.intensity += (flicker.target_intensity - emitter.intensity)
-            * flicker.lerp_speed
-            * delta;
-        emitter.radius += (flicker.target_radius - emitter.radius)
-            * flicker.lerp_speed
-            * delta;
+        emitter.intensity +=
+            (flicker.target_intensity - emitter.intensity) * flicker.lerp_speed * delta;
+        emitter.radius += (flicker.target_radius - emitter.radius) * flicker.lerp_speed * delta;
     }
 }

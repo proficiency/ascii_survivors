@@ -167,10 +167,7 @@ fn screen_position(world: IVec2, camera_offset: IVec2, size: UVec2, pixel_scale:
     let adjusted = world + camera_offset;
     let x = adjusted.x as f32 + 0.5;
     let y = size.y as f32 - adjusted.y as f32 - 1.0 + 0.5;
-    Vec2::new(
-        x * pixel_scale as f32,
-        y * pixel_scale as f32,
-    )
+    Vec2::new(x * pixel_scale as f32, y * pixel_scale as f32)
 }
 
 fn blend_color(base: LinearRgba, light: LinearRgba, weight: f32) -> LinearRgba {
@@ -201,7 +198,12 @@ fn gather_occluders(
 
     if let Some(player) = player_query.iter().next() {
         occluders.push(LightOccluder {
-            center: screen_position(player.world_position, camera_offset, overlay_size, overlay_scale),
+            center: screen_position(
+                player.world_position,
+                camera_offset,
+                overlay_size,
+                overlay_scale,
+            ),
             radius: 0.85 * overlay_scale as f32,
         });
     }
@@ -223,7 +225,12 @@ fn gather_occluders(
     for boss in boss_query.iter() {
         for segment in &boss.segments {
             occluders.push(LightOccluder {
-                center: screen_position(segment.position, camera_offset, overlay_size, overlay_scale),
+                center: screen_position(
+                    segment.position,
+                    camera_offset,
+                    overlay_size,
+                    overlay_scale,
+                ),
                 radius: 0.75 * overlay_scale as f32,
             });
         }
@@ -304,8 +311,7 @@ fn apply_light_basic(
                 continue;
             }
 
-            let normalized =
-                1.0 - (distance / radius_pixels).powf(emitter.falloff.max(0.1));
+            let normalized = 1.0 - (distance / radius_pixels).powf(emitter.falloff.max(0.1));
             let weight = (normalized * emitter.intensity).clamp(0.0, 1.0);
             if weight <= 0.0 {
                 continue;
@@ -356,8 +362,7 @@ fn apply_light_with_shadows(
                 continue;
             }
 
-            let normalized =
-                1.0 - (distance / radius_pixels).powf(emitter.falloff.max(0.1));
+            let normalized = 1.0 - (distance / radius_pixels).powf(emitter.falloff.max(0.1));
             let weight = (normalized * emitter.intensity * transmit).clamp(0.0, 1.0);
             if weight <= 0.0 {
                 continue;

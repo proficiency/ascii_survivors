@@ -21,7 +21,6 @@ impl LightingOverlay {
     }
 
     pub fn clear(&mut self) {
-        self.buffer
-            .fill(self.ambient_color);
+        self.buffer.fill(self.ambient_color);
     }
 }
