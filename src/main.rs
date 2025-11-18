@@ -2,17 +2,19 @@ mod effects;
 mod maps;
 mod objects;
 mod resources;
+mod scenes;
 mod spells;
 mod systems;
 
-use crate::systems::cleanup::despawn_portals;
 use crate::{
     effects::*,
     objects::{interaction::InteractionType, *},
     resources::*,
+    scenes::GameScenesPlugin,
     spells::*,
     systems::*,
 };
+
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
 use bevy_kira_audio::prelude::*;
@@ -31,18 +33,31 @@ fn main() {
             }),
             TerminalPlugins,
             AudioPlugin,
+            GameScenesPlugin,
         ))
         .init_state::<GameState>()
         .add_audio_channel::<Music>()
         .add_audio_channel::<Sfx>()
         .insert_resource(crate::systems::spell_casting::SpellInputTimer::default())
-        .add_systems(Startup, (setup, setup_resources, list_gamepads).chain())
+        .add_systems(
+            Startup,
+            (
+                setup,
+                setup_resources,
+                list_gamepads,
+                setup_lighting_overlay,
+            )
+                .chain(),
+        )
         .add_systems(OnEnter(GameState::Loading), show_window)
         .add_systems(
             OnEnter(GameState::FadingIn),
             (reset_fade_timer, play_start_sound).chain(),
         )
-        .add_systems(OnEnter(GameState::Game), (setup_game, play_theme, maps::map::load_map_system).chain())
+        .add_systems(
+            OnEnter(GameState::Game),
+            (setup_game, play_theme, maps::map::load_map_system).chain(),
+        )
         .add_systems(
             OnEnter(GameState::LevelTransition),
             (setup_level_transition, despawn_portals).chain(),
@@ -56,10 +71,9 @@ fn main() {
         .add_systems(
             Update,
             (
-                (loading_render_system, loading_update_system).run_if(in_state(GameState::Loading)),
-                (menu_input_system, menu_render_system).run_if(in_state(GameState::Menu)),
-                (fade_in_render_system, fade_in_update_system)
-                    .run_if(in_state(GameState::FadingIn)),
+                loading_update_system.run_if(in_state(GameState::Loading)),
+                menu_input_system.run_if(in_state(GameState::Menu)),
+                fade_in_update_system.run_if(in_state(GameState::FadingIn)),
                 (
                     player_movement,
                     spawn_enemies,
@@ -75,11 +89,13 @@ fn main() {
                         boss_ai,
                         auto_cast,
                         process_projectiles,
+                        process_fireballs,
                         process_collisions,
                         orb_movement,
                         process_orb_collection,
                         campfire_animation_system,
                         ember_animation_system,
+                        light_flicker_system,
                     )
                         .chain(),
                     update_status_effect,
@@ -93,28 +109,16 @@ fn main() {
                 )
                     .chain()
                     .run_if(in_state(GameState::Game)),
-                (heal_player_system,)
-                    .chain()
-                    .run_if(in_state(GameState::Game)),
-                (level_transition_system, level_transition_render_system)
-                    .run_if(in_state(GameState::LevelTransition)),
-                (
-                    heal_player_system,
-                )
-                    .chain()
-                    .run_if(in_state(GameState::Game)),
-                (
-                    level_transition_system,
-                    level_transition_render_system,
-                )
-                    .run_if(in_state(GameState::LevelTransition)),
-                (
-                    game_over_input_system,
-                    despawn_all_entities.run_if(in_state(GameState::GameOver)),
-                    game_over_render_system,
-                )
+                level_transition_system.run_if(in_state(GameState::LevelTransition)),
+                (game_over_input_system, despawn_all_entities)
                     .run_if(in_state(GameState::GameOver)),
             ),
+        )
+        .add_systems(
+            Update,
+            update_lighting_overlay
+                .after(render_system)
+                .run_if(in_state(GameState::Game)),
         )
         .run();
 }
@@ -170,6 +174,7 @@ fn setup(mut commands: Commands) {
 fn setup_game(mut commands: Commands, player_query: Query<&Player>) {
     if player_query.is_empty() {
         let mut player = Player::new(IVec2::new(40, 25));
+        player.arcanum.learn_spell(SpellType::Fireball);
         commands.spawn((player, Transform::default()));
     }
 }
@@ -181,24 +186,6 @@ fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
     }
 }
 
-fn menu_render_system(mut query: Query<&mut Terminal>) {
-    if let Ok(mut terminal) = query.single_mut() {
-        terminal.clear();
-
-        let title = "ASCII SURVIVORS";
-        let title_x = (80 - title.len()) / 2;
-        terminal.put_string([title_x, 15], title);
-
-        let button_text = "[ PLAY ]";
-        let button_x = (80 - button_text.len()) / 2;
-        terminal.put_string([button_x, 25], button_text);
-
-        let instruction = "Press SPACE or ENTER to start";
-        let instruction_x = (80 - instruction.len()) / 2;
-        terminal.put_string([instruction_x, 30], instruction);
-    }
-}
-
 fn menu_input_system(
     input: Res<ButtonInput<KeyCode>>,
     _mouse_input: Res<ButtonInput<MouseButton>>,
@@ -206,38 +193,6 @@ fn menu_input_system(
 ) {
     if input.just_pressed(KeyCode::Space) || input.just_pressed(KeyCode::Enter) {
         next_state.set(GameState::FadingIn);
-    }
-}
-
-fn loading_render_system(mut query: Query<&mut Terminal>, loading_timer: Res<LoadingTimer>) {
-    if let Ok(mut terminal) = query.single_mut() {
-        terminal.clear();
-
-        let title = "ASCII SURVIVORS";
-        let title_x = (80 - title.len()) / 2;
-        terminal.put_string([title_x, 20], title);
-
-        let loading_text = "Loading...";
-        let loading_x = (80 - loading_text.len()) / 2;
-        terminal.put_string([loading_x, 25], loading_text);
-
-        let progress = loading_timer.0.fraction();
-        let bar_width = 40;
-        let filled_width = (bar_width as f32 * progress) as usize;
-
-        let bar_x = (80 - bar_width) / 2;
-
-        for i in 0..bar_width {
-            if i < filled_width {
-                terminal.put_char([bar_x + i, 27], '█');
-            } else {
-                terminal.put_char([bar_x + i, 27], '░');
-            }
-        }
-
-        let percentage = format!("{}%", (progress * 100.0) as u32);
-        let percent_x = (80 - percentage.len()) / 2;
-        terminal.put_string([percent_x, 29], percentage);
     }
 }
 
@@ -269,49 +224,6 @@ fn play_start_sound(asset_server: Res<AssetServer>, audio: Res<AudioChannel<Sfx>
         .with_volume(0.5);
 }
 
-fn fade_in_render_system(mut query: Query<&mut Terminal>, fade_timer: Res<FadeTimer>) {
-    if let Ok(mut terminal) = query.single_mut() {
-        terminal.clear();
-
-        let fade_progress = fade_timer.0.fraction();
-
-        let terminal_height = 50;
-        let terminal_width = 80;
-
-        let fade_char = if fade_progress < 0.3 {
-            '█'
-        } else if fade_progress < 0.6 {
-            '▓'
-        } else if fade_progress < 0.9 {
-            '▒'
-        } else {
-            '░'
-        };
-
-        let coverage = 1.0 - fade_progress;
-        for y in 0..terminal_height {
-            for x in 0..terminal_width {
-                let center_x = terminal_width as f32 / 2.0;
-                let center_y = terminal_height as f32 / 2.0;
-                let distance =
-                    ((x as f32 - center_x).powi(2) + (y as f32 - center_y).powi(2)).sqrt();
-                let max_distance = (center_x.powi(2) + center_y.powi(2)).sqrt();
-                let normalized_distance = distance / max_distance;
-
-                if normalized_distance < coverage {
-                    terminal.put_char([x, y], fade_char);
-                }
-            }
-        }
-
-        if fade_progress < 0.8 {
-            let starting_text = "Starting...";
-            let starting_x = (80 - starting_text.len()) / 2;
-            terminal.put_string([starting_x, 25], starting_text);
-        }
-    }
-}
-
 fn fade_in_update_system(
     time: Res<Time>,
     mut fade_timer: ResMut<FadeTimer>,
@@ -332,24 +244,6 @@ fn death_detection_system(
         && player.health <= 0.0
     {
         next_state.set(GameState::GameOver);
-    }
-}
-
-fn game_over_render_system(mut query: Query<&mut Terminal>) {
-    if let Ok(mut terminal) = query.single_mut() {
-        terminal.clear();
-
-        let death_message = "YOU DIED!";
-        let death_x = (80 - death_message.len()) / 2;
-        terminal.put_string([death_x, 20], death_message);
-
-        let restart_message = "Press R to Restart";
-        let restart_x = (80 - restart_message.len()) / 2;
-        terminal.put_string([restart_x, 25], restart_message);
-
-        let menu_message = "Press ESC to return to Menu";
-        let menu_x = (80 - menu_message.len()) / 2;
-        terminal.put_string([menu_x, 27], menu_message);
     }
 }
 
@@ -426,6 +320,8 @@ fn setup_level_transition(
         commands.spawn((
             Campfire::new(campfire_position),
             crate::objects::Interaction::new(InteractionType::Campfire),
+            LightEmitter::campfire(),
+            LightFlicker::campfire(),
             Transform::from_xyz(campfire_position.x as f32, campfire_position.y as f32, 0.0),
         ));
     } else {
@@ -442,19 +338,5 @@ fn level_transition_system(
     if transition_timer.0.finished() {
         next_state.set(GameState::Game);
         transition_timer.0.reset();
-    }
-}
-
-fn level_transition_render_system(mut query: Query<&mut Terminal>) {
-    if let Ok(mut terminal) = query.single_mut() {
-        terminal.clear();
-
-        let message = "Level Transition...";
-        let message_x = (80 - message.len()) / 2;
-        terminal.put_string([message_x, 25], message);
-
-        let sub_message = "Entering new area...";
-        let sub_x = (80 - sub_message.len()) / 2;
-        terminal.put_string([sub_x, 27], sub_message);
     }
 }

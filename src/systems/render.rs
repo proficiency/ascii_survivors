@@ -1,4 +1,4 @@
-use crate::{objects::*, resources::*, maps::*, effects::StatusEffect};
+use crate::{effects::StatusEffect, maps::*, objects::*, resources::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;
@@ -114,22 +114,22 @@ pub fn render_system(
     );
 }
 
-fn draw_map(
-    terminal: &mut Terminal,
-    map: &Map,
-    camera_offset: IVec2,
-    terminal_size: UVec2,
-) {
+fn draw_map(terminal: &mut Terminal, map: &Map, camera_offset: IVec2, terminal_size: UVec2) {
     for x in 0..map.width {
         for y in 0..map.height {
             let world_position = IVec2::new(x as i32, y as i32) - camera_offset;
             let draw_position = world_to_screen(world_position, terminal_size);
-            
-            if terminal.size().contains_point([draw_position.x, draw_position.y]) {
+
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
                 if let Some(tile) = map.get_tile(x as i32, y as i32) {
                     if tile.explored {
-                        let mut tile_char = TerminalString::from(tile.tile_type.to_char().to_string());
-                        tile_char.decoration.fg_color = Some(LinearRgba::from(tile.tile_type.to_color()));
+                        let mut tile_char =
+                            TerminalString::from(tile.tile_type.to_char().to_string());
+                        tile_char.decoration.fg_color =
+                            Some(LinearRgba::from(tile.tile_type.to_color()));
                         terminal.put_string([draw_position.x, draw_position.y], tile_char);
                     }
                 }
@@ -161,7 +161,7 @@ pub fn draw_scene(
 
         let terminal_size = terminal.size();
 
-      if let Some(map) = map {
+        if let Some(map) = map {
             draw_map(&mut terminal, &map, camera_offset.0, terminal_size);
         }
 
@@ -364,7 +364,7 @@ pub fn draw_scene(
             );
         }
 
-      if matches!(level.as_ref(), Level::Survival) {
+        if matches!(level.as_ref(), Level::Survival) {
             draw_survival_timer(terminal_query, seconds_survived, ruleset);
         }
     }
