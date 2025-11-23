@@ -24,10 +24,12 @@ pub trait Spell: Send + Sync + 'static {
     fn get_category(&self) -> SpellCategory;
     fn clone_box(&self) -> Box<dyn Spell>;
 }
+
 pub trait ProjectileSpell: Spell {}
 pub trait AreaSpell: Spell {}
 pub trait BuffSpell: Spell {}
 pub trait SummonSpell: Spell {}
+
 #[derive(Component, Clone)]
 pub struct SpellBase {
     pub name: String,
@@ -50,6 +52,7 @@ impl SpellBase {
         }
     }
 }
+
 #[derive(Component, Clone)]
 pub struct ProjectileSpellData {
     pub base: SpellBase,
@@ -59,13 +62,12 @@ pub struct ProjectileSpellData {
     pub spread: f32,
 }
 
-
 impl Spell for ProjectileSpellData {
     fn cast(&self, commands: &mut Commands, player_pos: IVec2, target: Option<IVec2>) -> Result<(), SpellError> {
         if let Some(target_pos) = target {
             let direction = (target_pos - player_pos).as_vec2().normalize_or_zero();
 
-            // todo: implement spread properly
+            // todo: implement spread properly, for spells like spread shot
             /*let spread_angle = if self.spread > 0.0 {
                 use rand::Rng;
                 let mut rng = rand::thread_rng();
@@ -139,6 +141,7 @@ impl ProjectileSpellData {
         }
     }
 }
+
 #[derive(Component, Clone)]
 pub struct AreaSpellData {
     pub base: SpellBase,

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use super::spell::{Spell, SpellCategory, ProjectileSpellData, AreaSpellData, SpellBase};
+use super::spell::*;
 use super::arcanum::Arcanum;
 
 #[derive(Debug)]
@@ -8,12 +8,14 @@ pub enum UpgradeError {
     InvalidParameter,
     UnknownError,
 }
+
 pub trait SpellUpgrade: Send + Sync + 'static {
     fn apply(&self, arcanum: &mut Arcanum) -> Result<(), UpgradeError>;
     fn get_name(&self) -> &str;
     fn get_description(&self) -> &str;
     fn clone_box(&self) -> Box<dyn SpellUpgrade>;
 }
+
 #[derive(Clone)]
 pub struct DamageUpgrade {
     pub name: String,

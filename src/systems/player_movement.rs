@@ -1,8 +1,8 @@
-use bevy::prelude::*;
-use bevy_ascii_terminal::*;
-
+use crate::maps::Map;
 use crate::objects::player::Player;
 use crate::resources::{camera::CameraOffset, scene_lock::SceneLock};
+use bevy::prelude::*;
+use bevy_ascii_terminal::*;
 
 pub fn player_movement(
     mut player_query: Query<&mut Player>,
@@ -13,6 +13,7 @@ pub fn player_movement(
     mut camera_offset: ResMut<CameraOffset>,
     terminal_query: Query<&Terminal>,
     scene_lock: Res<SceneLock>,
+    map: Option<Res<Map>>,
 ) {
     timer.0.tick(time.delta());
     if timer.0.finished()
@@ -29,10 +30,10 @@ pub fn player_movement(
             const TOLERANCE: f32 = 0.35f32;
 
             if left_stick.y < -TOLERANCE {
-                move_offset.y -= 1;
+                move_offset.y += 1;
             }
             if left_stick.y > TOLERANCE {
-                move_offset.y += 1;
+                move_offset.y -= 1;
             }
             if left_stick.x < -TOLERANCE {
                 move_offset.x -= 1;
@@ -41,12 +42,12 @@ pub fn player_movement(
                 move_offset.x += 1;
             }
 
-            // D-Pad movement
+            // D-pad movement
             if gamepad.pressed(GamepadButton::DPadUp) {
-                move_offset.y += 1;
+                move_offset.y -= 1;
             }
             if gamepad.pressed(GamepadButton::DPadDown) {
-                move_offset.y -= 1;
+                move_offset.y += 1;
             }
             if gamepad.pressed(GamepadButton::DPadLeft) {
                 move_offset.x -= 1;
@@ -57,10 +58,10 @@ pub fn player_movement(
         }
 
         if keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::ArrowUp) {
-            move_offset.y += 1;
+            move_offset.y -= 1;
         }
         if keyboard_input.pressed(KeyCode::KeyS) || keyboard_input.pressed(KeyCode::ArrowDown) {
-            move_offset.y -= 1;
+            move_offset.y += 1;
         }
         if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft) {
             move_offset.x -= 1;
@@ -70,18 +71,29 @@ pub fn player_movement(
         }
 
         if scene_lock.0 {
-            let new_x = (player.position.x + move_offset.x).clamp(0, size[0] as i32 - 1);
-            let new_y = (player.position.y - move_offset.y).clamp(0, size[1] as i32 - 1); // Corrected Y-axis movement
-            player.position = IVec2::new(new_x, new_y);
-            player.world_position =
-                IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
-                    - camera_offset.0;
-        } else {
-            camera_offset.0 -= move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
-            player.position = IVec2::new(center_x, center_y);
-            player.world_position =
-                IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
-                    - camera_offset.0;
+            let new_pos = player.position + move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
+
+            if let Some(map) = &map {
+                if map.is_walkable(new_pos.x, new_pos.y) {
+                    player.position = new_pos;
+                    player.world_position =
+                        IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
+                            - camera_offset.0;
+                }
+            }
+        } else if let Some(map) = &map {
+            let clamped = move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
+            let center = IVec2::new(center_x, center_y) + clamped;
+
+            if map.is_walkable(center.x, center.y) {
+                let camera_delta = IVec2::new(clamped.x, -clamped.y);
+                camera_offset.0 -= camera_delta;
+
+                player.position = center;
+                player.world_position =
+                    IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
+                        - camera_offset.0;
+            }
         }
     }
 }

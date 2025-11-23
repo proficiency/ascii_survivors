@@ -1,6 +1,4 @@
 use bevy::prelude::*;
-use rexpaint::*;
-use std::ops::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TileType {
@@ -16,7 +14,7 @@ impl TileType {
     pub fn is_walkable(&self) -> bool {
         match self {
             TileType::Empty | TileType::Grass | TileType::Door => true,
-            TileType::Wall | TileType::Water | TileType::Stone => false,
+            TileType::Wall | TileType::Water | TileType::Stone => true,
         }
     }
 
