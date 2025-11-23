@@ -36,12 +36,13 @@ pub fn portal_transition_system(
                     portal_transition.progress = portal_transition.timer.fraction();
 
                     if portal_transition.timer.finished() {
-                        let transitioning_to_rest = matches!(level.as_ref(), Level::Survival);
+                        let transitioning_to_rest = matches!(level.as_ref(), Level::Dungeon);
 
                         *level = match level.as_ref() {
-                            Level::Survival => Level::Rest,
-                            Level::Rest => Level::Survival,
-                            Level::Grassland | Level::Dungeon => Level::Rest,
+                            Level::Grassland => Level::Survival,
+                            Level::Survival => Level::Dungeon,
+                            Level::Dungeon => Level::Rest,
+                            Level::Rest => Level::Grassland,
                         };
 
                         if transitioning_to_rest {

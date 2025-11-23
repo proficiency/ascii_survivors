@@ -162,8 +162,8 @@ fn setup_resources(mut commands: Commands) {
     commands.insert_resource(CameraOffset(IVec2::default()));
     commands.insert_resource(crate::resources::scene_lock::SceneLock::default());
     commands.insert_resource(crate::resources::ruleset::Ruleset::default());
-    commands.insert_resource(crate::resources::level::Level::default()); // Add Level resource
     commands.insert_resource(crate::resources::kill_count::KillCount::default());
+    commands.insert_resource(Level::Grassland);
 }
 
 fn setup(mut commands: Commands) {
