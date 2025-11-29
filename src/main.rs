@@ -9,8 +9,8 @@ use crate::{
     effects::*,
     objects::{interaction::InteractionType, *},
     resources::*,
-    systems::*,
     spells::*,
+    systems::*,
 };
 
 use bevy::{prelude::*, window::*};
@@ -38,7 +38,13 @@ fn main() {
         .insert_resource(crate::systems::spell_casting::SpellInputTimer::default())
         .add_systems(
             Startup,
-            (setup, setup_resources, list_gamepads, setup_lighting_overlay).chain(),
+            (
+                setup,
+                setup_resources,
+                list_gamepads,
+                setup_lighting_overlay,
+            )
+                .chain(),
         )
         .add_systems(OnEnter(GameState::Loading), show_window)
         .add_systems(
