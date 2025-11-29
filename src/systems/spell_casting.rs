@@ -1,10 +1,11 @@
 use crate::objects::boss::Boss;
 use crate::objects::enemy::Enemy;
 use crate::objects::player::Player;
-use crate::resources::scene_lock::SceneLock;
+use crate::resources::{channels::Sfx, scene_lock::SceneLock};
 use crate::spells::arcanum::SpellType;
 use bevy::prelude::*;
 use bevy_ascii_terminal::Terminal;
+use bevy_kira_audio::prelude::*;
 #[derive(Resource)]
 pub struct SpellInputTimer(pub Timer);
 
@@ -22,6 +23,8 @@ pub fn spell_casting_system(
     time: Res<Time>,
     mut timer: ResMut<SpellInputTimer>,
     scene_lock: Res<SceneLock>,
+    audio: Res<AudioChannel<Sfx>>,
+    asset_server: Res<AssetServer>,
 ) {
     timer.0.tick(time.delta());
 
@@ -59,7 +62,7 @@ pub fn spell_casting_system(
         }
 
         if let Some(target_entity) = nearest_target_entity {
-            player
+            if player
                 .arcanum
                 .cast_spell(
                     &mut commands,
@@ -67,7 +70,12 @@ pub fn spell_casting_system(
                     player.world_position,
                     Some(target_entity),
                 )
-                .ok();
+                .is_ok()
+            {
+                audio
+                    .play(asset_server.load("sfx/25_Wind_01.wav"))
+                    .with_volume(0.25);
+            }
         }
     }
 }
