@@ -112,7 +112,13 @@ pub fn render_system(
     );
 }
 
-fn draw_map(terminal: &mut Terminal, map: &Map, camera_offset: IVec2, terminal_size: UVec2) {
+fn draw_map(
+    terminal: &mut Terminal,
+    map: &Map,
+    camera_offset: IVec2,
+    terminal_size: UVec2,
+    wind_patches: &[WindPatch],
+) {
     for x in 0..map.width {
         for y in 0..map.height {
             let draw_position = world_to_screen(
@@ -128,10 +134,28 @@ fn draw_map(terminal: &mut Terminal, map: &Map, camera_offset: IVec2, terminal_s
                     if tile.explored {
                         let mut tile_char =
                             TerminalString::from(tile.tile_type.to_char().to_string());
-                        tile_char.decoration.fg_color =
-                            Some(LinearRgba::from(tile.tile_type.to_color()));
-                        tile_char.decoration.bg_color =
-                            Some(LinearRgba::from(tile.tile_type.to_bg_color()));
+                        let mut fg = tile.tile_type.to_color();
+                        let mut bg = tile.tile_type.to_bg_color();
+
+                        if matches!(tile.tile_type, TileType::Grass) {
+                            let mut gust_strength = 0.0f32;
+                            for wind in wind_patches {
+                                let dx = (wind.center.x - x as i32).abs();
+                                let dy = (wind.center.y - y as i32).abs();
+                                if dx <= wind.half_width && dy <= wind.half_height {
+                                    gust_strength = gust_strength.max(wind.intensity);
+                                }
+                            }
+                            if gust_strength > 0.0 {
+                                let gust_char = if (x + y) % 2 == 0 { '.' } else { '`' };
+                                tile_char = TerminalString::from(gust_char.to_string());
+                                fg = lighten_color(fg, 0.04 * gust_strength);
+                                bg = lighten_color(bg, 0.02 * gust_strength);
+                            }
+                        }
+
+                        tile_char.decoration.fg_color = Some(LinearRgba::from(fg));
+                        tile_char.decoration.bg_color = Some(LinearRgba::from(bg));
                         terminal.put_string([draw_position.x, draw_position.y], tile_char);
                     }
                 }
@@ -164,7 +188,15 @@ pub fn draw_scene(
         let terminal_size = terminal.size();
 
         if let Some(map) = map {
-            draw_map(&mut terminal, &map, camera_offset.0, terminal_size);
+            let wind_patches =
+                current_wind_patches(camera_offset.0, terminal_size, seconds_survived);
+            draw_map(
+                &mut terminal,
+                &map,
+                camera_offset.0,
+                terminal_size,
+                &wind_patches,
+            );
         }
 
         // draw orbs
@@ -376,4 +408,114 @@ pub fn draw_scene(
             draw_survival_timer(terminal_query, seconds_survived, ruleset);
         }
     }
+}
+
+fn current_wind_patches(
+    camera_offset: IVec2,
+    terminal_size: UVec2,
+    seconds: f32,
+) -> Vec<WindPatch> {
+    if terminal_size[0] < 4 || terminal_size[1] < 4 {
+        return Vec::new();
+    }
+
+    const GUST_INTERVAL: f32 = 10.0;
+    const BASE_DURATION: f32 = 1.4;
+    const MAX_EXTRA_DURATION: f32 = 1.2;
+    const MARGIN: i32 = 2;
+
+    let cycle = (seconds / GUST_INTERVAL).floor();
+    let t = seconds % GUST_INTERVAL;
+    if t == 0.0 {
+        return Vec::new();
+    }
+
+    // deterministic pseudo-random seed per cycle
+    let seed = (cycle as u32)
+        .wrapping_mul(747_796_405)
+        .wrapping_add(2_891_336_453);
+
+    let intensity = 0.35 + (seed % 65) as f32 / 100.0; // 0.35..1.0
+    let travel_tiles = (12.0 + intensity * 4.0).round() as i32; // about 7 tiles typical
+    let gust_duration = BASE_DURATION + MAX_EXTRA_DURATION * intensity;
+
+    if t > gust_duration {
+        return Vec::new(); // no gust this moment
+    }
+
+    // start at the right and sweep left a short distance
+    let start_screen_x = terminal_size[0] as i32 + MARGIN;
+    let end_screen_x = start_screen_x - travel_tiles;
+    let y_range = (terminal_size[1] as i32 - MARGIN * 2).max(1) as u32;
+    let base_y = MARGIN + (seed % y_range) as i32;
+
+    let progress = (t / gust_duration).clamp(0.0, 1.0);
+    let eased = 1.0 - (1.0 - progress).powi(2); // starts fast, slows down
+    let screen_x = start_screen_x as f32 + (end_screen_x - start_screen_x) as f32 * eased;
+
+    // slight vertical wobble for softness
+    let wobble = ((progress * std::f32::consts::PI * 2.0).sin() * 1.0).round() as i32;
+    let screen_y = base_y + wobble;
+
+    let center = IVec2::new(screen_x.round() as i32, screen_y) - camera_offset;
+
+    // tall, thin column with gentle fade in/out based on progress
+    let half_width = 1;
+    let half_height = 3;
+    let base_intensity = (eased * (1.0 - progress * 0.5)).clamp(0.0, 1.0) * intensity;
+
+    let mut patches = Vec::new();
+    // main gust
+    patches.push(WindPatch {
+        center,
+        half_width,
+        half_height,
+        intensity: base_intensity,
+    });
+
+    // trailing wisps when intensity is high
+    if intensity > 0.7 {
+        for i in 1..=2 {
+            let trail_offset = i as i32;
+            let falloff = 0.5f32.powi(i as i32);
+            patches.push(WindPatch {
+                center: center + IVec2::new(trail_offset, 0),
+                half_width,
+                half_height: half_height - 1,
+                intensity: base_intensity * falloff,
+            });
+        }
+    }
+
+    patches
+}
+
+#[derive(Clone, Copy)]
+struct WindPatch {
+    center: IVec2,
+    half_width: i32,
+    half_height: i32,
+    intensity: f32,
+}
+
+fn lighten_color(color: Color, amount: f32) -> Color {
+    let srgb = color.to_srgba();
+    let clamp = |v: f32| v.clamp(0.0, 1.0);
+    Color::srgba(
+        clamp(srgb.red + amount),
+        clamp(srgb.green + amount),
+        clamp(srgb.blue + amount),
+        srgb.alpha,
+    )
+}
+
+fn darken_color(color: Color, amount: f32) -> Color {
+    let srgb = color.to_srgba();
+    let clamp = |v: f32| v.clamp(0.0, 1.0);
+    Color::srgba(
+        clamp(srgb.red - amount),
+        clamp(srgb.green - amount),
+        clamp(srgb.blue - amount),
+        srgb.alpha,
+    )
 }
