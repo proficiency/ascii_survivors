@@ -75,15 +75,18 @@ fn main() {
                 menu_input_system.run_if(in_state(GameState::Menu)),
                 fade_in_update_system.run_if(in_state(GameState::FadingIn)),
                 (
-                    player_movement,
-                    spawn_enemies,
-                    spawn_bosses,
-                    spawn_portal_after_survival,
-                    spawn_shop_npcs_on_rest_level,
-                    interaction_system,
-                    heal_player_system,
-                    portal_transition_system,
-                    update_survival_timer,
+                    (
+                        player_movement,
+                        spawn_enemies,
+                        spawn_bosses,
+                        spawn_portal_after_survival,
+                        spawn_shop_npcs_on_rest_level,
+                        interaction_system,
+                        heal_player_system,
+                        portal_transition_system,
+                        update_survival_timer,
+                    )
+                        .chain(),
                     (
                         enemy_ai,
                         boss_ai,
@@ -98,14 +101,17 @@ fn main() {
                         light_flicker_system,
                     )
                         .chain(),
-                    update_status_effect,
-                    death_detection_system,
-                    spell_casting_system,
-                    systems::render::render_system,
-                    spell_render_system,
-                    render_message_system,
-                    render_portal_transition,
-                    despawn_entities,
+                    (
+                        update_status_effect,
+                        death_detection_system,
+                        spell_casting_system,
+                        systems::render::render_system,
+                        spell_render_system,
+                        render_message_system,
+                        render_portal_transition,
+                        despawn_entities,
+                    )
+                        .chain(),
                 )
                     .chain()
                     .run_if(in_state(GameState::Game)),

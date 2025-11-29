@@ -1,4 +1,4 @@
-use crate::{objects::*, resources::*};
+use crate::{maps::Map, objects::*, resources::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::Terminal;
 use rand::prelude::*;
@@ -17,8 +17,9 @@ pub fn spawn_portal_after_survival(
     portal_query: Query<&Portal>,
     terminal_query: Query<&Terminal>,
     mut scene_lock: ResMut<SceneLock>,
-    camera_offset: Res<CameraOffset>,
+    _camera_offset: Res<CameraOffset>,
     level: Res<Level>,
+    map: Option<Res<Map>>,
 ) {
     if level.as_ref() == &Level::Rest {
         return;
@@ -28,36 +29,41 @@ pub fn spawn_portal_after_survival(
         if portal_query.is_empty() {
             scene_lock.0 = true;
 
-            if let Ok(terminal) = terminal_query.single() {
-                let terminal_size = terminal.size();
-                let width = terminal_size[0] as i32;
-                let height = terminal_size[1] as i32;
-                let min_x = -camera_offset.0.x + PORTAL_SPAWN_MARGIN;
-                let max_x = min_x + width - 1 - 2 * PORTAL_SPAWN_MARGIN;
-                let min_y = -camera_offset.0.y + PORTAL_SPAWN_MARGIN;
-                let max_y = min_y + height - 1 - 2 * PORTAL_SPAWN_MARGIN;
+            if let (Ok(_terminal), Some(map)) = (terminal_query.single(), map.as_ref()) {
+                let bounds_min = IVec2::splat(PORTAL_SPAWN_MARGIN);
+                let bounds_max = IVec2::new(
+                    map.width as i32 - 1 - PORTAL_SPAWN_MARGIN,
+                    map.height as i32 - 1 - PORTAL_SPAWN_MARGIN,
+                );
 
-                if min_x <= max_x && min_y <= max_y {
+                if bounds_min.x <= bounds_max.x && bounds_min.y <= bounds_max.y {
                     if let Ok(player) = player_query.single() {
-                        let player_position = player.position;
+                        let player_position = player.world_position;
 
-                        // generate a random position within the visible area
-                        // that is not too close to the player
+                        // generate a random position within the map bounds
+                        // that is walkable and not too close to the player
                         let mut rng = rand::rng();
-                        let mut portal_x;
-                        let mut portal_y;
-                        let mut portal_position;
-
-                        loop {
-                            portal_x = rng.random_range(min_x..=max_x);
-                            portal_y = rng.random_range(min_y..=max_y);
-                            portal_position = IVec2::new(portal_x, portal_y);
+                        let mut attempts = 0;
+                        let portal_position = loop {
+                            let portal_x = rng.random_range(bounds_min.x..=bounds_max.x);
+                            let portal_y = rng.random_range(bounds_min.y..=bounds_max.y);
+                            let portal_position = IVec2::new(portal_x, portal_y);
 
                             let distance = (portal_position - player_position).length_squared();
-                            if distance > PLAYER_SAFE_RADIUS * PLAYER_SAFE_RADIUS {
-                                break;
+                            let far_enough = distance > PLAYER_SAFE_RADIUS * PLAYER_SAFE_RADIUS;
+                            let walkable = map.is_walkable(portal_position.x, portal_position.y);
+
+                            if far_enough && walkable {
+                                break portal_position;
                             }
-                        }
+
+                            attempts += 1;
+                            if attempts > 512 {
+                                // fallback to player-safe constraint only to avoid rare infinite loops
+                                break portal_position;
+                            }
+                        };
+
                         commands.spawn((Portal::new(portal_position),));
                     }
                 }

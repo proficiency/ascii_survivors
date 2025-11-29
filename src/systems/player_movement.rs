@@ -70,29 +70,26 @@ pub fn player_movement(
             move_offset.x += 1;
         }
 
-        if scene_lock.0 {
-            let new_pos = player.position + move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
+        let clamped = move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
 
+        if clamped == IVec2::ZERO {
+            return;
+        }
+
+        let proposed_world = player.world_position + clamped;
+
+        if scene_lock.0 {
             if let Some(map) = &map {
-                if map.is_walkable(new_pos.x, new_pos.y) {
-                    player.position = new_pos;
-                    player.world_position =
-                        IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
-                            - camera_offset.0;
+                if map.is_walkable(proposed_world.x, proposed_world.y) {
+                    player.world_position = proposed_world;
+                    player.position = player.world_position + camera_offset.0;
                 }
             }
         } else if let Some(map) = &map {
-            let clamped = move_offset.clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
-            let center = IVec2::new(center_x, center_y) + clamped;
-
-            if map.is_walkable(center.x, center.y) {
-                let camera_delta = IVec2::new(clamped.x, -clamped.y);
-                camera_offset.0 -= camera_delta;
-
-                player.position = center;
-                player.world_position =
-                    IVec2::new(player.position.x, size[1] as i32 - 1 - player.position.y)
-                        - camera_offset.0;
+            if map.is_walkable(proposed_world.x, proposed_world.y) {
+                player.world_position = proposed_world;
+                player.position = IVec2::new(center_x, center_y);
+                camera_offset.0 = player.position - player.world_position;
             }
         }
     }

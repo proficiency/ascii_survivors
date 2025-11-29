@@ -74,11 +74,7 @@ pub fn render_fireballs(
         let terminal_size = terminal.size();
 
         for fireball in fireball_query.iter() {
-            let world_position = fireball.position + camera_offset.0;
-            let draw_position = IVec2::new(
-                world_position.x,
-                terminal_size[1] as i32 - 1 - world_position.y,
-            );
+            let draw_position = fireball.position + camera_offset.0;
 
             if draw_position.x >= 0
                 && draw_position.x < terminal_size[0] as i32

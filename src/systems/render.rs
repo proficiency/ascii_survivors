@@ -4,10 +4,8 @@ use bevy_ascii_terminal::string::TerminalString;
 use bevy_ascii_terminal::*;
 
 fn world_to_screen(world_position: IVec2, terminal_size: UVec2) -> IVec2 {
-    IVec2::new(
-        world_position.x,
-        terminal_size[1] as i32 - 1 - world_position.y,
-    )
+    let _ = terminal_size;
+    world_position
 }
 
 pub struct ResourceBarConfig<'a> {
@@ -117,8 +115,10 @@ pub fn render_system(
 fn draw_map(terminal: &mut Terminal, map: &Map, camera_offset: IVec2, terminal_size: UVec2) {
     for x in 0..map.width {
         for y in 0..map.height {
-            let world_position = IVec2::new(x as i32, y as i32) - camera_offset;
-            let draw_position = world_to_screen(world_position, terminal_size);
+            let draw_position = world_to_screen(
+                IVec2::new(x as i32, y as i32) + camera_offset,
+                terminal_size,
+            );
 
             if terminal
                 .size()

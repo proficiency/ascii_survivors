@@ -1,5 +1,6 @@
 use crate::{objects::*, resources::*};
 use bevy::prelude::*;
+use bevy_ascii_terminal::GridSize;
 use bevy_kira_audio::prelude::*;
 
 pub fn portal_transition_system(
@@ -88,6 +89,7 @@ pub fn render_portal_transition(
     mut query: Query<&mut bevy_ascii_terminal::Terminal>,
     portal_transition: Res<PortalTransition>,
     player_query: Query<&Player>,
+    portal_query: Query<&Portal>,
     camera_offset: Res<crate::resources::CameraOffset>,
 ) {
     if portal_transition.progress <= 0.0 {
@@ -95,7 +97,16 @@ pub fn render_portal_transition(
     }
 
     if let (Ok(mut terminal), Ok(player)) = (query.single_mut(), player_query.single()) {
-        let screen_pos = player.world_position + camera_offset.0;
+        let Some(active_portal) = portal_query
+            .iter()
+            .min_by_key(|portal| (portal.position - player.world_position).length_squared())
+        else {
+            return;
+        };
+
+        let terminal_size = terminal.size();
+        let world_pos = active_portal.position + camera_offset.0;
+        let screen_pos = IVec2::new(world_pos.x, terminal_size[1] as i32 - 1 - world_pos.y);
         let radius = (portal_transition.progress * 20.0) as i32;
         for dy in -radius..=radius {
             for dx in -radius..=radius {
@@ -103,7 +114,7 @@ pub fn render_portal_transition(
                 if distance <= radius as f32 && distance >= (radius - 1) as f32 {
                     let x = screen_pos.x + dx;
                     let y = screen_pos.y + dy;
-                    if x >= 0 && x < 80 && y >= 0 && y < 50 {
+                    if terminal_size.contains_point([x, y]) {
                         let char = match portal_transition.progress {
                             p if p < 0.25 => '░',
                             p if p < 0.5 => '▒',
