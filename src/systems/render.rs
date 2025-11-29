@@ -130,6 +130,8 @@ fn draw_map(terminal: &mut Terminal, map: &Map, camera_offset: IVec2, terminal_s
                             TerminalString::from(tile.tile_type.to_char().to_string());
                         tile_char.decoration.fg_color =
                             Some(LinearRgba::from(tile.tile_type.to_color()));
+                        tile_char.decoration.bg_color =
+                            Some(LinearRgba::from(tile.tile_type.to_bg_color()));
                         terminal.put_string([draw_position.x, draw_position.y], tile_char);
                     }
                 }
@@ -251,16 +253,22 @@ pub fn draw_scene(
         // draw player
         if let Ok((player, status_effect)) = player_query.single() {
             // note: the player is assumed to always be in the center of our viewpoint
-            let mut player_position = TerminalString::from("@");
+            let draw_position = IVec2::new(player.position.x, player.position.y);
+            if terminal
+                .size()
+                .contains_point([draw_position.x, draw_position.y])
+            {
+                let mut player_position = TerminalString::from("@");
 
-            if let Some(effect) = status_effect {
-                player_position.decoration.fg_color = Some(LinearRgba::from(effect.color));
-            } else {
-                player_position.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
+                if let Some(effect) = status_effect {
+                    player_position.decoration.fg_color = Some(LinearRgba::from(effect.color));
+                } else {
+                    player_position.decoration.fg_color =
+                        Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
+                }
+
+                terminal.put_string([draw_position.x, draw_position.y], player_position);
             }
-
-            terminal.put_string([player.position.x, player.position.y], player_position);
         }
 
         // draw portals

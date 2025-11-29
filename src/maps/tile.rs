@@ -8,13 +8,14 @@ pub enum TileType {
     Grass,
     Stone,
     Door,
+    Bridge,
 }
 
 impl TileType {
     pub fn is_walkable(&self) -> bool {
         match self {
-            TileType::Empty | TileType::Grass | TileType::Door => true,
-            TileType::Wall | TileType::Water | TileType::Stone => true,
+            TileType::Empty | TileType::Grass | TileType::Door | TileType::Bridge => true,
+            TileType::Wall | TileType::Water | TileType::Stone => false,
         }
     }
 
@@ -26,6 +27,7 @@ impl TileType {
             TileType::Grass => '.',
             TileType::Stone => ':',
             TileType::Door => '+',
+            TileType::Bridge => '=',
         }
     }
 
@@ -37,6 +39,19 @@ impl TileType {
             TileType::Grass => Color::linear_rgb(0.0, 0.5, 0.0),
             TileType::Stone => Color::linear_rgb(0.6, 0.6, 0.6),
             TileType::Door => Color::linear_rgb(0.5, 0.25, 0.0),
+            TileType::Bridge => Color::linear_rgb(0.65, 0.4, 0.2),
+        }
+    }
+
+    pub fn to_bg_color(&self) -> Color {
+        match self {
+            TileType::Grass => Color::linear_rgb(0.02, 0.12, 0.02),
+            TileType::Water => Color::linear_rgb(0.0, 0.02, 0.1),
+            TileType::Stone => Color::linear_rgb(0.08, 0.08, 0.08),
+            TileType::Wall => Color::linear_rgb(0.1, 0.1, 0.1),
+            TileType::Bridge => Color::linear_rgb(0.05, 0.03, 0.02),
+            TileType::Door => Color::linear_rgb(0.05, 0.03, 0.02),
+            TileType::Empty => Color::linear_rgb(0.0, 0.0, 0.0),
         }
     }
 }
