@@ -158,7 +158,9 @@ pub fn process_projectiles(
                         .as_vec2()
                         .normalize_or_zero();
 
-                    projectile.position += (direction * speed).as_ivec2().clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
+                    projectile.position += (direction * speed)
+                        .as_ivec2()
+                        .clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
 
                     if projectile.position == last_position {
                         target_exists = false;
@@ -201,7 +203,7 @@ pub fn process_fireballs(
 
         for (entity, mut fireball, _fireball_marker) in fireball_query.iter_mut() {
             fireball.lifetime -= time.delta_secs();
-            
+
             if fireball.lifetime <= 0.0 {
                 commands.entity(entity).insert(Despawn);
                 continue;
@@ -225,10 +227,10 @@ pub fn process_fireballs(
 
             if let Some(target_pos) = target_position {
                 fireball.target_last_position = Some(target_pos);
-                
+
                 let direction = (target_pos - fireball.position).as_vec2();
                 let distance = direction.length();
-                
+
                 if distance <= speed {
                     fireball.position = target_pos;
                     commands.entity(entity).insert(Despawn);
