@@ -102,53 +102,60 @@ pub fn update_lighting_overlay(
         );
     }
 
-    let occluders = gather_occluders(
-        &player_occluders,
-        &shop_occluders,
-        &enemy_occluders,
-        &boss_occluders,
-        overlay_size,
-        overlay_scale,
-        camera_offset.0,
-    );
-
-    for (campfire, emitter) in campfire_lights.iter() {
-        let pos = screen_position(
-            campfire.position,
-            camera_offset.0,
+    // Skip occluder collection unless there are campfire lights that need shadow casting.
+    if !campfire_lights.is_empty() {
+        let occluders = gather_occluders(
+            &player_occluders,
+            &shop_occluders,
+            &enemy_occluders,
+            &boss_occluders,
             overlay_size,
             overlay_scale,
+            camera_offset.0,
         );
 
-        let radius_pixels = emitter.radius * overlay_scale as f32;
-        let relevant_occluders: Vec<LightOccluder> = occluders
-            .iter()
-            .filter(|occluder| {
-                (occluder.center - pos).length_squared()
-                    <= (radius_pixels + occluder.radius).powi(2)
-            })
-            .cloned()
-            .collect();
+        let mut relevant_occluders: Vec<LightOccluder> = Vec::new();
 
-        if relevant_occluders.is_empty() {
-            apply_light_basic(
-                pos,
-                emitter,
-                &mut overlay.buffer,
-                width,
-                height,
+        for (campfire, emitter) in campfire_lights.iter() {
+            let pos = screen_position(
+                campfire.position,
+                camera_offset.0,
+                overlay_size,
                 overlay_scale,
             );
-        } else {
-            apply_light_with_shadows(
-                pos,
-                emitter,
-                &relevant_occluders,
-                &mut overlay.buffer,
-                width,
-                height,
-                overlay_scale,
+
+            let radius_pixels = emitter.radius * overlay_scale as f32;
+            relevant_occluders.clear();
+            relevant_occluders.extend(
+                occluders
+                    .iter()
+                    .filter(|occluder| {
+                        (occluder.center - pos).length_squared()
+                            <= (radius_pixels + occluder.radius).powi(2)
+                    })
+                    .copied(),
             );
+
+            if relevant_occluders.is_empty() {
+                apply_light_basic(
+                    pos,
+                    emitter,
+                    &mut overlay.buffer,
+                    width,
+                    height,
+                    overlay_scale,
+                );
+            } else {
+                apply_light_with_shadows(
+                    pos,
+                    emitter,
+                    &relevant_occluders,
+                    &mut overlay.buffer,
+                    width,
+                    height,
+                    overlay_scale,
+                );
+            }
         }
     }
 
@@ -179,7 +186,7 @@ fn blend_color(base: LinearRgba, light: LinearRgba, weight: f32) -> LinearRgba {
     )
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct LightOccluder {
     center: Vec2,
     radius: f32,
