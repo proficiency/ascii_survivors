@@ -6,14 +6,7 @@ mod scenes;
 mod spells;
 mod systems;
 
-use crate::{
-    effects::*,
-    objects::*,
-    resources::*,
-    scenes::*,
-    spells::*,
-    systems::*,
-};
+use crate::{effects::*, objects::*, resources::*, scenes::*, spells::*, systems::*};
 
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;

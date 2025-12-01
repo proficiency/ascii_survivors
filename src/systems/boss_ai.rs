@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{objects::*, effects::*, resources::*};
+use crate::{effects::*, objects::*, resources::*};
 
 pub fn boss_ai(
     mut commands: Commands,

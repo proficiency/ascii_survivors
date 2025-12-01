@@ -1,4 +1,4 @@
-use crate::{spells::*, objects::*, resources::*};
+use crate::{objects::*, resources::*, spells::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::Terminal;
 #[derive(Resource)]

@@ -1,7 +1,7 @@
+use crate::{objects::*, resources::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 use rand::prelude::*;
-use crate::{objects::*, resources::*};
 
 pub fn spawn_enemies(
     mut commands: Commands,

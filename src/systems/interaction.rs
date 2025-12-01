@@ -1,4 +1,7 @@
-use crate::{objects::{Interaction, *}, resources::*};
+use crate::{
+    objects::{Interaction, *},
+    resources::*,
+};
 use bevy::prelude::*;
 
 const INTERACTION_KEY: KeyCode = KeyCode::KeyE;

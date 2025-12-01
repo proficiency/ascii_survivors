@@ -1,4 +1,4 @@
-use crate::{resources::*, objects::*};
+use crate::{objects::*, resources::*};
 use bevy::prelude::*;
 
 pub fn ember_animation_system(
