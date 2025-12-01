@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rand::{Rng, rng};
+use rand::prelude::*;
 
 use crate::objects::{LightEmitter, LightFlicker};
 
@@ -7,7 +7,7 @@ pub fn light_flicker_system(
     time: Res<Time>,
     mut query: Query<(&mut LightEmitter, &mut LightFlicker)>,
 ) {
-    let mut rng = rng();
+    let mut rng = rand::rng();
 
     for (mut emitter, mut flicker) in query.iter_mut() {
         flicker.timer.tick(time.delta());

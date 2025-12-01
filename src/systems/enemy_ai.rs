@@ -1,11 +1,5 @@
+use crate::{effects::*, objects::*, resources::*};
 use bevy::prelude::*;
-
-use crate::effects::status_effect::StatusEffect;
-use crate::objects::enemy::Enemy;
-use crate::objects::player::Player;
-use crate::resources::scene_lock::SceneLock;
-use crate::resources::timers::DamageEffectTimer;
-use crate::resources::timers::EnemyMovementTimer;
 
 pub fn enemy_ai(
     mut commands: Commands,

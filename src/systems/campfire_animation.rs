@@ -1,6 +1,4 @@
-use crate::objects::campfire::Campfire;
-use crate::objects::ember::Ember;
-use crate::resources::level::Level;
+use crate::{objects::*, resources::*};
 use bevy::prelude::*;
 use rand::prelude::*;
 

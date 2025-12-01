@@ -1,4 +1,4 @@
-use crate::maps::tile::{Tile, TileType};
+use crate::{resources::Level, maps::tile::{Tile, TileType}};
 use bevy::prelude::*;
 use rexpaint::*;
 use std::io::Cursor;
@@ -90,25 +90,25 @@ impl Map {
     }
 }
 
-pub fn load_map_system(mut commands: Commands, level: Res<crate::resources::level::Level>) {
+pub fn load_map_system(mut commands: Commands, level: Res<Level>) {
     // For now, we'll create a simple test map
     // In the future, we'll load actual rexpaint files based on the level
     let map = create_test_map_for_level(*level);
     commands.insert_resource(map);
 }
 
-fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
+fn create_test_map_for_level(level: Level) -> Map {
     let map_name = match level {
-        crate::resources::level::Level::Grassland => "Grassland",
-        crate::resources::level::Level::Dungeon => "Dungeon",
-        crate::resources::level::Level::Rest => "Rest Area",
-        crate::resources::level::Level::Survival => "Survival Mode",
+        Level::Grassland => "Grassland",
+        Level::Dungeon => "Dungeon",
+        Level::Rest => "Rest Area",
+        Level::Survival => "Survival Mode",
     };
 
     let mut map = Map::new(80, 50, map_name.to_string());
 
     match level {
-        crate::resources::level::Level::Grassland => {
+        Level::Grassland => {
             for x in 10..70 {
                 for y in 10..40 {
                     if x % 3 == 0 && y % 3 == 0 {
@@ -117,7 +117,7 @@ fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
                 }
             }
         }
-        crate::resources::level::Level::Dungeon => {
+        Level::Dungeon => {
             for x in 25..55 {
                 map.tiles[x][25] = Tile::wall();
             }
@@ -126,11 +126,11 @@ fn create_test_map_for_level(level: crate::resources::level::Level) -> Map {
                 map.tiles[50][y] = Tile::wall();
             }
         }
-        crate::resources::level::Level::Rest => {
+        Level::Rest => {
             // campfire in the center
             map.tiles[40][25] = Tile::new(TileType::Empty);
         }
-        crate::resources::level::Level::Survival => {
+        Level::Survival => {
             map.tiles[40][20] = Tile::new(TileType::Empty);
             map.tiles[41][20] = Tile::new(TileType::Wall);
             map.tiles[42][20] = Tile::new(TileType::Water);

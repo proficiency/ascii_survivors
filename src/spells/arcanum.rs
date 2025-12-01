@@ -1,3 +1,4 @@
+use crate::objects::{Fireball, Projectile};
 use bevy::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -11,7 +12,7 @@ pub struct Arcanum {
     pub spells: Vec<SpellType>,
     pub mana: f32,
     pub max_mana: f32,
-    pub mana_regen_rate: f32,
+    pub mana_regen_rate: f32, // todo: implement mana regeneration
 }
 
 impl Arcanum {
@@ -50,7 +51,7 @@ impl Arcanum {
             SpellType::Fireball => {
                 if target.is_some() {
                     commands.spawn((
-                        crate::objects::projectile::Projectile {
+                        Projectile {
                             position: player_pos,
                             target,
                             target_last_position: None,
@@ -59,7 +60,7 @@ impl Arcanum {
                             lifetime: 3.0,
                             max_lifetime: 3.0,
                         },
-                        crate::objects::projectile::Fireball,
+                        Fireball,
                     ));
                     Ok(())
                 } else {
@@ -68,7 +69,7 @@ impl Arcanum {
             }
             SpellType::MagicMissile => {
                 if target.is_some() {
-                    commands.spawn((crate::objects::projectile::Projectile {
+                    commands.spawn((Projectile {
                         position: player_pos,
                         target,
                         target_last_position: None,

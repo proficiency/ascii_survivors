@@ -1,3 +1,4 @@
+use crate::{objects::*, resources::*};
 use bevy::{
     prelude::*,
     render::{
@@ -7,11 +8,6 @@ use bevy::{
     sprite::Sprite,
 };
 use bevy_ascii_terminal::Terminal;
-
-use crate::{
-    objects::{Boss, Campfire, Enemy, LightEmitter, Player, ShopNpc},
-    resources::{CameraOffset, LightingOverlay},
-};
 
 const LIGHTING_PIXEL_SCALE: u32 = 4;
 

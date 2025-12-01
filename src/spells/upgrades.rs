@@ -1,6 +1,4 @@
 use bevy::prelude::*;
-use super::spell::*;
-use super::arcanum::Arcanum;
 
 #[derive(Debug)]
 pub enum UpgradeError {

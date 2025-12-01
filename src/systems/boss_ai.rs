@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 
-use crate::objects::boss::Boss;
-use crate::objects::player::Player;
-use crate::{effects::*, resources::*};
+use crate::{effects::*, objects::*, resources::*};
 
 pub fn boss_ai(
     mut commands: Commands,
@@ -81,7 +79,7 @@ pub fn boss_ai(
 fn move_boss(boss: &mut Boss, new_head_position: IVec2) {
     match boss.boss_type {
         // segments follow one another towards the head
-        crate::objects::boss::BossType::Snake => {
+        BossType::Snake => {
             let mut previous_positions = vec![];
             for segment in &boss.segments {
                 previous_positions.push(segment.position);
@@ -98,7 +96,7 @@ fn move_boss(boss: &mut Boss, new_head_position: IVec2) {
         }
 
         // all segments move as one entity
-        crate::objects::boss::BossType::Giant => {
+        BossType::Giant => {
             if !boss.segments.is_empty() {
                 let old_head_position = boss.segments[0].position;
                 boss.segments[0].position = new_head_position;

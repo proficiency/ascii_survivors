@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
-use bevy::prelude::*;
-use bevy::scene::{DynamicScene, InstanceId, SceneSpawner};
+use bevy::{
+    prelude::*,
+    scene::{DynamicScene, InstanceId, SceneSpawner},
+};
+
 use bevy_ascii_terminal::Terminal;
 
 use crate::resources::{FadeTimer, GameState, LoadingTimer};
