@@ -1,6 +1,4 @@
-use crate::maps::Map;
-use crate::objects::player::Player;
-use crate::resources::{camera::CameraOffset, scene_lock::SceneLock};
+use crate::{maps::*, objects::*, resources::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 

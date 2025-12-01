@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 
-use crate::objects::boss::Boss;
-use crate::objects::player::Player;
-use crate::{effects::*, resources::*};
+use crate::{objects::*, effects::*, resources::*};
 
 pub fn boss_ai(
     mut commands: Commands,

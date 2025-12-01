@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 use rand::Rng;
 
-use crate::objects::boss::{Boss, BossType};
-use crate::resources::*;
+use crate::{objects::*, resources::*};
 
 pub fn spawn_bosses(
     mut commands: Commands,

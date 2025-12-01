@@ -1,7 +1,6 @@
 use crate::{effects::StatusEffect, maps::*, objects::*, resources::*};
 use bevy::prelude::*;
-use bevy_ascii_terminal::string::TerminalString;
-use bevy_ascii_terminal::*;
+use bevy_ascii_terminal::{string::TerminalString, *};
 
 fn world_to_screen(world_position: IVec2, terminal_size: UVec2) -> IVec2 {
     IVec2::new(

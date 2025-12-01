@@ -1,8 +1,4 @@
-use crate::objects::boss::Boss;
-use crate::objects::enemy::Enemy;
-use crate::objects::player::Player;
-use crate::resources::scene_lock::SceneLock;
-use crate::spells::arcanum::SpellType;
+use crate::{spells::*, objects::*, resources::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::Terminal;
 #[derive(Resource)]

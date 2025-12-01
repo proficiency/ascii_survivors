@@ -1,5 +1,4 @@
-use crate::objects::ember::Ember;
-use crate::resources::level::Level;
+use crate::{resources::*, objects::*};
 use bevy::prelude::*;
 
 pub fn ember_animation_system(

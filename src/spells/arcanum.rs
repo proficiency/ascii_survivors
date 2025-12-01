@@ -11,7 +11,7 @@ pub struct Arcanum {
     pub spells: Vec<SpellType>,
     pub mana: f32,
     pub max_mana: f32,
-    pub mana_regen_rate: f32,
+    pub mana_regen_rate: f32, // todo: implement mana regeneration
 }
 
 impl Arcanum {

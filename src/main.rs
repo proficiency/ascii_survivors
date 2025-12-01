@@ -8,9 +8,9 @@ mod systems;
 
 use crate::{
     effects::*,
-    objects::{interaction::InteractionType, *},
+    objects::*,
     resources::*,
-    scenes::GameScenesPlugin,
+    scenes::*,
     spells::*,
     systems::*,
 };
