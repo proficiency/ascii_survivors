@@ -7,7 +7,7 @@ pub fn player_movement(
     gamepad_input: Query<(Entity, &Gamepad)>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
-    mut timer: ResMut<crate::resources::timers::PlayerMovementTimer>,
+    mut timer: ResMut<PlayerMovementTimer>,
     mut camera_offset: ResMut<CameraOffset>,
     terminal_query: Query<&Terminal>,
     scene_lock: Res<SceneLock>,

@@ -87,7 +87,7 @@ pub fn render_portal_transition(
     mut query: Query<&mut bevy_ascii_terminal::Terminal>,
     portal_transition: Res<PortalTransition>,
     player_query: Query<&Player>,
-    camera_offset: Res<crate::resources::CameraOffset>,
+    camera_offset: Res<CameraOffset>,
 ) {
     if portal_transition.progress <= 0.0 {
         return;

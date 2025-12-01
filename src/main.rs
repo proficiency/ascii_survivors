@@ -31,7 +31,7 @@ fn main() {
         .init_state::<GameState>()
         .add_audio_channel::<Music>()
         .add_audio_channel::<Sfx>()
-        .insert_resource(crate::systems::spell_casting::SpellInputTimer::default())
+        .insert_resource(SpellInputTimer::default())
         .add_systems(
             Startup,
             (
@@ -153,10 +153,10 @@ fn setup_resources(mut commands: Commands) {
     commands.insert_resource(InteractionTimer(Timer::from_seconds(0.5, TimerMode::Once)));
     commands.insert_resource(PortalTransition::default());
     commands.insert_resource(CameraOffset(IVec2::default()));
-    commands.insert_resource(crate::resources::scene_lock::SceneLock::default());
-    commands.insert_resource(crate::resources::ruleset::Ruleset::default());
-    commands.insert_resource(crate::resources::level::Level::default()); // Add Level resource
-    commands.insert_resource(crate::resources::kill_count::KillCount::default());
+    commands.insert_resource(SceneLock::default());
+    commands.insert_resource(Ruleset::default());
+    commands.insert_resource(Level::default());
+    commands.insert_resource(KillCount::default());
 }
 
 fn setup(mut commands: Commands) {
@@ -287,7 +287,7 @@ fn setup_level_transition(
     mut player_query: Query<&mut Player>,
     mut camera_offset: ResMut<CameraOffset>,
     level: Res<Level>,
-    mut scene_lock: ResMut<crate::resources::scene_lock::SceneLock>,
+    mut scene_lock: ResMut<SceneLock>,
 ) {
     for entity in enemy_query.iter() {
         commands.entity(entity).despawn();
@@ -312,7 +312,7 @@ fn setup_level_transition(
 
         commands.spawn((
             Campfire::new(campfire_position),
-            crate::objects::Interaction::new(InteractionType::Campfire),
+            crate::objects::Interaction::new(InteractionType::Campfire), // todo: maybe we should reconsider naming it 'Interaction'
             LightEmitter::campfire(),
             LightFlicker::campfire(),
             Transform::from_xyz(campfire_position.x as f32, campfire_position.y as f32, 0.0),
