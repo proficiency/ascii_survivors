@@ -1,3 +1,4 @@
+mod debug;
 mod effects;
 mod maps;
 mod objects;
@@ -6,7 +7,9 @@ mod scenes;
 mod spells;
 mod systems;
 
-use crate::{effects::*, objects::*, resources::*, scenes::*, spells::*, systems::*};
+use crate::{
+    debug::DebugPlugins, effects::*, objects::*, resources::*, scenes::*, spells::*, systems::*,
+};
 
 use bevy::{prelude::*, window::*};
 use bevy_ascii_terminal::*;
@@ -27,6 +30,8 @@ fn main() {
             TerminalPlugins,
             AudioPlugin,
             GameScenesPlugin,
+            #[cfg(debug_assertions)]
+            DebugPlugins,
         ))
         .init_state::<GameState>()
         .add_audio_channel::<Music>()
