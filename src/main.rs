@@ -122,12 +122,10 @@ fn main() {
 }
 
 fn play_theme(asset_server: Res<AssetServer>, audio: Res<AudioChannel<Music>>, level: Res<Level>) {
-    if level.as_ref() == &Level::Survival {
-        audio
-            .play(asset_server.load("sfx/harmony.ogg"))
-            .with_volume(0.1)
-            .looped();
-    }
+    audio
+        .play(asset_server.load("sfx/harmony.ogg"))
+        .with_volume(0.1)
+        .looped();
 }
 
 fn setup_resources(mut commands: Commands) {
