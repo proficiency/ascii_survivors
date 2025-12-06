@@ -40,10 +40,15 @@ The goal of ascii survivors is to provide a challenging, rewarding, and replayab
   * Items can be found in levels, purchased from shops, or looted from bosses.
 * Map:
   * Several hand-crafted levels with unique themes(grassland, desert, cave, dungeon, etc.) and enemies.
-  * Created in [REXPaint](https://www.gridsagegames.com/rexpaint/), loaded at start-up.
   * Puzzles, traps, incentives to explore.
   * Creative use of lighting.
+    * Puzzles utilizing lightning 
   * Breakable environment objects(e.g. barrels, crates, pots) that drop gold, experience, or items.
+  * Map Editor(Utilizing [REXPaint](https://www.gridsagegames.com/rexpaint/)):
+    * Ability to place placeholder cells that tell the game to decide whatever to place on that tile, such as items.
+    * Zones
+      * Spawn only a specific category of objects, such as items, monsters that fit the area's theme, keys, stairs/portals/ladders, etc.
+      * Safezones, like our rest area. The player cannot take damage here, maybe this is the only area which a player can swap items or upgrade certain attributes.
 * Magnet.
 
 ## Visuals
