@@ -2,59 +2,35 @@ mod debug;
 mod effects;
 mod maps;
 mod objects;
+mod plugins;
 mod resources;
 mod scenes;
 mod spells;
 mod systems;
 
 use crate::{
-    debug::DebugPlugins, effects::*, objects::*, resources::*, scenes::*, spells::*, systems::*,
+    debug::DebugPlugins, effects::*, objects::*, plugins::BootstrapPlugin, resources::*, scenes::*,
+    spells::*, systems::*,
 };
 
-use bevy::{prelude::*, window::*};
-use bevy_ascii_terminal::*;
+use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "ASCII Survivors".into(),
-                    visible: false,
-                    present_mode: PresentMode::Fifo,
-                    ..default()
-                }),
-                ..default()
-            }),
-            TerminalPlugins,
-            AudioPlugin,
+            BootstrapPlugin, // spawn the window, terminal, audio, and resources
             GameScenesPlugin,
             #[cfg(debug_assertions)]
             DebugPlugins,
         ))
-        .init_state::<GameState>()
-        .add_audio_channel::<Music>()
-        .add_audio_channel::<Sfx>()
-        .insert_resource(SpellInputTimer::default())
-        .add_systems(
-            Startup,
-            (
-                setup,
-                setup_resources,
-                list_gamepads,
-                setup_lighting_overlay,
-            )
-                .chain(),
-        )
-        .add_systems(OnEnter(GameState::Loading), show_window)
         .add_systems(
             OnEnter(GameState::FadingIn),
             (reset_fade_timer, play_start_sound).chain(),
         )
         .add_systems(
             OnEnter(GameState::Game),
-            (setup_game, play_theme, maps::map::load_map_system).chain(),
+            (spawn_player, play_theme, maps::map::load_map_system).chain(),
         )
         .add_systems(
             OnEnter(GameState::LevelTransition),
@@ -128,57 +104,11 @@ fn play_theme(asset_server: Res<AssetServer>, audio: Res<AudioChannel<Music>>, l
         .looped();
 }
 
-fn setup_resources(mut commands: Commands) {
-    commands.insert_resource(EnemySpawnTimer(Timer::from_seconds(
-        1.25,
-        TimerMode::Repeating,
-    )));
-    commands.insert_resource(ProjectileCooldownTimer(Timer::from_seconds(
-        2.0,
-        TimerMode::Once,
-    )));
-    commands.insert_resource(PlayerMovementTimer(Timer::from_seconds(
-        0.1,
-        TimerMode::Repeating,
-    )));
-    commands.insert_resource(EnemyMovementTimer(Timer::from_seconds(
-        0.35,
-        TimerMode::Repeating,
-    )));
-    commands.insert_resource(DamageEffectTimer(Timer::from_seconds(0.5, TimerMode::Once)));
-    commands.insert_resource(LoadingTimer(Timer::from_seconds(3.0, TimerMode::Once)));
-    commands.insert_resource(FadeTimer(Timer::from_seconds(2.0, TimerMode::Once)));
-    commands.insert_resource(SurvivalTimer(Timer::from_seconds(3600.0, TimerMode::Once)));
-    commands.insert_resource(LevelTransitionTimer(Timer::from_seconds(
-        1.0,
-        TimerMode::Once,
-    )));
-    commands.insert_resource(InteractionTimer(Timer::from_seconds(0.5, TimerMode::Once)));
-    commands.insert_resource(PortalTransition::default());
-    commands.insert_resource(CameraOffset(IVec2::default()));
-    commands.insert_resource(SceneLock::default());
-    commands.insert_resource(Ruleset::default());
-    commands.insert_resource(Level::default());
-    commands.insert_resource(KillCount::default());
-}
-
-fn setup(mut commands: Commands) {
-    commands.spawn(Terminal::new([80, 50]));
-    commands.spawn(TerminalCamera::new());
-}
-
-fn setup_game(mut commands: Commands, player_query: Query<&Player>) {
+fn spawn_player(mut commands: Commands, player_query: Query<&Player>) {
     if player_query.is_empty() {
         let mut player = Player::new(IVec2::new(40, 25));
         player.arcanum.learn_spell(SpellType::Fireball);
         commands.spawn((player, Transform::default()));
-    }
-}
-
-fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
-    println!("Looking for gamepads...");
-    for name in &gamepads {
-        println!("Found gamepad: {}", name.0);
     }
 }
 
@@ -201,12 +131,6 @@ fn loading_update_system(
 
     if loading_timer.0.finished() {
         next_state.set(GameState::Menu);
-    }
-}
-
-fn show_window(mut window_query: Query<&mut Window>) {
-    if let Ok(mut window) = window_query.single_mut() {
-        window.visible = true;
     }
 }
 
