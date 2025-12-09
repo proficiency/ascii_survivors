@@ -1,6 +1,5 @@
-use crate::{objects::*, resources::*};
+use crate::{objects::*, plugins::audio::*, resources::*};
 use bevy::prelude::*;
-use bevy_kira_audio::prelude::*;
 
 pub fn portal_transition_system(
     time: Res<Time>,
@@ -9,7 +8,7 @@ pub fn portal_transition_system(
     mut level: ResMut<Level>,
     player_query: Query<&Player>,
     portal_query: Query<&Portal>,
-    audio: Res<AudioChannel<Music>>,
+    mut audio_events: EventWriter<AudioEvent>,
 ) {
     if let Ok(player) = player_query.single() {
         let mut player_near_portal = false;
@@ -44,8 +43,12 @@ pub fn portal_transition_system(
                             Level::Grassland | Level::Dungeon => Level::Rest,
                         };
 
+                        // (dont) stop the music
                         if transitioning_to_rest {
-                            audio.stop();
+                            audio_events.write(AudioEvent {
+                                channel: AudioChannelType::Music,
+                                command: AudioCommand::Stop,
+                            });
                         }
 
                         next_state.set(GameState::LevelTransition);

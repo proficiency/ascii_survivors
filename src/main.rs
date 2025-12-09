@@ -9,17 +9,23 @@ mod spells;
 mod systems;
 
 use crate::{
-    debug::DebugPlugins, effects::*, objects::*, plugins::BootstrapPlugin, resources::*, scenes::*,
-    spells::*, systems::*,
+    debug::DebugPlugins,
+    effects::*,
+    objects::*,
+    resources::*,
+    scenes::*,
+    spells::*,
+    systems::*,
+    {audio::*, bootstrap::*, plugins::*},
 };
 
 use bevy::prelude::*;
-use bevy_kira_audio::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins((
-            BootstrapPlugin, // spawn the window, terminal, audio, and resources
+            BootstrapPlugin, // spawn the window, terminal, and resources
+            AudioManagerPlugin,
             GameScenesPlugin,
             #[cfg(debug_assertions)]
             DebugPlugins,
@@ -30,17 +36,11 @@ fn main() {
         )
         .add_systems(
             OnEnter(GameState::Game),
-            (spawn_player, play_theme, maps::map::load_map_system).chain(),
+            (spawn_player, maps::map::load_map_system).chain(),
         )
         .add_systems(
             OnEnter(GameState::LevelTransition),
             (setup_level_transition, despawn_portals).chain(),
-        )
-        .add_systems(
-            OnEnter(GameState::GameOver),
-            |music_channel: Res<AudioChannel<Music>>| {
-                music_channel.stop();
-            },
         )
         .add_systems(
             Update,
@@ -97,13 +97,6 @@ fn main() {
         .run();
 }
 
-fn play_theme(asset_server: Res<AssetServer>, audio: Res<AudioChannel<Music>>, level: Res<Level>) {
-    audio
-        .play(asset_server.load("sfx/harmony.ogg"))
-        .with_volume(0.1)
-        .looped();
-}
-
 fn spawn_player(mut commands: Commands, player_query: Query<&Player>) {
     if player_query.is_empty() {
         let mut player = Player::new(IVec2::new(40, 25));
@@ -138,10 +131,15 @@ fn reset_fade_timer(mut fade_timer: ResMut<FadeTimer>) {
     fade_timer.0.reset();
 }
 
-fn play_start_sound(asset_server: Res<AssetServer>, audio: Res<AudioChannel<Sfx>>) {
-    audio
-        .play(asset_server.load("sfx/start.wav"))
-        .with_volume(0.5);
+fn play_start_sound(mut audio_events: EventWriter<AudioEvent>) {
+    audio_events.write(AudioEvent {
+        channel: AudioChannelType::Sfx,
+        command: AudioCommand::Play {
+            audio: "sfx/start.wav",
+            looped: false,
+            volume: Some(0.5),
+        },
+    });
 }
 
 fn fade_in_update_system(
@@ -159,11 +157,16 @@ fn fade_in_update_system(
 fn death_detection_system(
     player_query: Query<&Player>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut audio_events: EventWriter<AudioEvent>,
 ) {
     if let Ok(player) = player_query.single()
         && player.health <= 0.0
     {
         next_state.set(GameState::GameOver);
+        audio_events.write(AudioEvent {
+            channel: AudioChannelType::Music,
+            command: AudioCommand::Stop,
+        });
     }
 }
 

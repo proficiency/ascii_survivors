@@ -3,14 +3,13 @@ use crate::objects::boss::Boss;
 use crate::objects::enemy::Enemy;
 use crate::objects::orb::Orb;
 use crate::objects::player::Player;
-use crate::resources::channels::*;
+use crate::plugins::audio::*;
 use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
 use crate::resources::timers::ProjectileCooldownTimer;
 use crate::systems::cleanup::Despawn;
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
-use bevy_kira_audio::prelude::*;
 
 #[derive(Component)]
 pub struct Projectile {
@@ -47,8 +46,7 @@ pub fn auto_cast(
     boss_query: Query<(Entity, &Boss)>,
     time: Res<Time>,
     mut timer: ResMut<ProjectileCooldownTimer>,
-    audio: Res<AudioChannel<Sfx>>,
-    asset_server: Res<AssetServer>,
+    mut audio_events: EventWriter<AudioEvent>,
     _scene_lock: Res<SceneLock>,
 ) {
     timer.0.tick(time.delta());
@@ -98,9 +96,14 @@ pub fn auto_cast(
                 },));
             }
 
-            audio
-                .play(asset_server.load("sfx/25_Wind_01.wav"))
-                .with_volume(0.25);
+            audio_events.write(AudioEvent {
+                channel: AudioChannelType::Sfx,
+                command: AudioCommand::Play {
+                    audio: "sfx/25_Wind_01.wav",
+                    looped: false,
+                    volume: Some(0.25),
+                },
+            });
             timer.0.reset();
         }
     }

@@ -2,7 +2,6 @@ use crate::resources::*;
 use crate::systems::*;
 use bevy::{prelude::*, window::PresentMode};
 use bevy_ascii_terminal::*;
-use bevy_kira_audio::prelude::*;
 
 pub struct BootstrapPlugin;
 
@@ -20,11 +19,8 @@ impl Plugin for BootstrapPlugin {
                 ..default()
             }),
             TerminalPlugins,
-            AudioPlugin,
         ))
         .init_state::<GameState>()
-        .add_audio_channel::<Music>()
-        .add_audio_channel::<Sfx>()
         .add_systems(
             Startup,
             (
