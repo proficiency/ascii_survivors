@@ -16,7 +16,7 @@ use crate::{
     scenes::*,
     spells::*,
     systems::*,
-    {audio::*, bootstrap::*, plugins::*},
+    {audio::*, bootstrap::*, gamepad::*, plugins::*},
 };
 
 use bevy::prelude::*;
@@ -25,6 +25,7 @@ fn main() {
     App::new()
         .add_plugins((
             BootstrapPlugin, // spawn the window, terminal, and resources
+            GamepadPlugin,
             AudioManagerPlugin,
             GameScenesPlugin,
             #[cfg(debug_assertions)]

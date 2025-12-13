@@ -25,19 +25,16 @@ pub fn player_movement(
         let mut move_offset = IVec2::new(0, 0);
         for (_, gamepad) in &gamepad_input {
             let left_stick = gamepad.left_stick();
-            const TOLERANCE: f32 = 0.35f32;
+            const DEADZONE: f32 = 0.35f32;
 
-            if left_stick.y < -TOLERANCE {
-                move_offset.y += 1;
+            let x = left_stick.x;
+            let y = -left_stick.y; // invert so up is negative like keyboard
+
+            if x.abs() >= DEADZONE {
+                move_offset.x += x.signum() as i32;
             }
-            if left_stick.y > TOLERANCE {
-                move_offset.y -= 1;
-            }
-            if left_stick.x < -TOLERANCE {
-                move_offset.x -= 1;
-            }
-            if left_stick.x > TOLERANCE {
-                move_offset.x += 1;
+            if y.abs() >= DEADZONE {
+                move_offset.y += y.signum() as i32;
             }
 
             // D-pad movement

@@ -26,18 +26,10 @@ impl Plugin for BootstrapPlugin {
             (
                 add_resources,
                 spawn_terminal,
-                list_gamepads,
                 crate::systems::setup_lighting_overlay,
             )
                 .chain(),
         );
-    }
-}
-
-fn list_gamepads(gamepads: Query<(&Name, &Gamepad)>) {
-    info!("Looking for gamepads...");
-    for name in &gamepads {
-        info!("Found gamepad: {}", name.0);
     }
 }
 
