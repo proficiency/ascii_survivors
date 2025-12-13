@@ -167,7 +167,7 @@ pub fn update_lighting_overlay(
 }
 
 fn screen_position(world: IVec2, camera_offset: IVec2, size: UVec2, pixel_scale: u32) -> Vec2 {
-    let adjusted = world + camera_offset;
+    let adjusted = world - camera_offset;
     let x = adjusted.x as f32 + 0.5;
     let y = size.y as f32 - adjusted.y as f32 - 1.0 + 0.5;
     Vec2::new(x * pixel_scale as f32, y * pixel_scale as f32)

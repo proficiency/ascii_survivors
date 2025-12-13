@@ -23,16 +23,16 @@ pub fn spawn_shop_npcs_on_rest_level(
         let terminal_size = terminal.size();
         let width = terminal_size[0] as i32;
 
-        let min_x = -camera_offset.0.x + SHOP_NPC_SPAWN_MARGIN;
+        let min_x = camera_offset.0.x + SHOP_NPC_SPAWN_MARGIN;
         let max_x = min_x + width - 1 - 2 * SHOP_NPC_SPAWN_MARGIN;
 
         let npc1_position = IVec2::new(
             min_x + (max_x - min_x) / 3,
-            -camera_offset.0.y + SHOP_NPC_SPAWN_MARGIN,
+            camera_offset.0.y + SHOP_NPC_SPAWN_MARGIN,
         );
         let npc2_position = IVec2::new(
             min_x + 2 * (max_x - min_x) / 3,
-            -camera_offset.0.y + SHOP_NPC_SPAWN_MARGIN,
+            camera_offset.0.y + SHOP_NPC_SPAWN_MARGIN,
         );
 
         commands.spawn((

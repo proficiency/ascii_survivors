@@ -178,7 +178,7 @@ pub fn process_projectiles(
                 continue;
             }
 
-            let draw_position = projectile.position + camera_offset.0;
+            let draw_position = projectile.position - camera_offset.0;
             if draw_position.x < 0
                 || draw_position.x >= terminal_size[0] as i32
                 || draw_position.y < 0
@@ -251,7 +251,7 @@ pub fn process_fireballs(
                 continue;
             }
 
-            let draw_position = fireball.position + camera_offset.0;
+            let draw_position = fireball.position - camera_offset.0;
             if draw_position.x < -10
                 || draw_position.x > terminal_size[0] as i32 + 10
                 || draw_position.y < -10

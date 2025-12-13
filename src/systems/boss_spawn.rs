@@ -45,7 +45,7 @@ pub fn spawn_bosses(
                 };
 
                 // ensure the boss spawns offscreen
-                let spawn_position = IVec2::new(x, y) - camera_offset.0;
+                let spawn_position = IVec2::new(x, y) + camera_offset.0;
                 commands.spawn((Boss::new(spawn_position, boss_type),));
             }
         }
