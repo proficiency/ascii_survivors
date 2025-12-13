@@ -166,7 +166,7 @@ pub fn draw_scene(
 
         // draw orbs
         for orb in orb_query.iter() {
-            let world_position = orb.position + camera_offset.0;
+            let world_position = orb.position - camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
 
             if terminal
@@ -182,7 +182,7 @@ pub fn draw_scene(
 
         // draw enemies
         for enemy in enemy_query.iter() {
-            let world_position = enemy.position + camera_offset.0;
+            let world_position = enemy.position - camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
 
             if terminal
@@ -199,7 +199,7 @@ pub fn draw_scene(
         // draw bosses
         for boss in boss_query.iter() {
             for segment in &boss.segments {
-                let world_position = segment.position + camera_offset.0;
+                let world_position = segment.position - camera_offset.0;
                 let draw_position = world_to_screen(world_position, terminal_size);
 
                 if terminal
@@ -215,7 +215,7 @@ pub fn draw_scene(
 
         // draw normal projectiles
         for projectile in projectile_query.iter() {
-            let world_position = projectile.position + camera_offset.0;
+            let world_position = projectile.position - camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
 
             // ensure projectile is within our viewport before drawing it
@@ -232,7 +232,7 @@ pub fn draw_scene(
 
         // draw fireballs
         for fireball in fireball_query.iter() {
-            let world_position = fireball.position + camera_offset.0;
+            let world_position = fireball.position - camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
 
             // ensure fireball is within our viewport before drawing it
@@ -264,7 +264,7 @@ pub fn draw_scene(
 
         // draw portals
         for portal in portal_query.iter() {
-            let world_position = portal.position + camera_offset.0;
+            let world_position = portal.position - camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
 
             if terminal
@@ -280,7 +280,7 @@ pub fn draw_scene(
 
         // draw campfire
         for campfire in campfire_query.iter() {
-            let world_position = campfire.position + camera_offset.0;
+            let world_position = campfire.position - camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
             let wood_position = IVec2::new(draw_position.x, draw_position.y + 1);
             if terminal
@@ -304,7 +304,7 @@ pub fn draw_scene(
         }
 
         for ember in ember_query.iter() {
-            let world_position = ember.position + camera_offset.0;
+            let world_position = ember.position - camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
 
             if terminal
@@ -320,7 +320,7 @@ pub fn draw_scene(
 
         // draw shop npcs
         for shop_npc in shop_npc_query.iter() {
-            let world_position = shop_npc.position + camera_offset.0;
+            let world_position = shop_npc.position - camera_offset.0;
             let draw_position = world_to_screen(world_position, terminal_size);
             if terminal
                 .size()
