@@ -1,4 +1,7 @@
-use crate::{resources::Level, maps::tile::{Tile, TileType}};
+use crate::{
+    maps::tile::{Tile, TileType},
+    resources::Level,
+};
 use bevy::prelude::*;
 use rexpaint::*;
 use std::io::Cursor;

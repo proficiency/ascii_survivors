@@ -16,7 +16,7 @@ use crate::{
     scenes::*,
     spells::*,
     systems::*,
-    {audio::*, bootstrap::*, gamepad::*, plugins::*},
+    {audio::*, bootstrap::*, input::*, plugins::*},
 };
 
 use bevy::prelude::*;
@@ -25,12 +25,13 @@ fn main() {
     App::new()
         .add_plugins((
             BootstrapPlugin, // spawn the window, terminal, and resources
-            GamepadPlugin,
+            InputPlugin,
             AudioManagerPlugin,
             GameScenesPlugin,
             #[cfg(debug_assertions)]
             DebugPlugins,
         ))
+        .add_event::<InteractionMessageEvent>()
         .add_systems(
             OnEnter(GameState::FadingIn),
             (reset_fade_timer, play_start_sound).chain(),
@@ -56,6 +57,7 @@ fn main() {
                     spawn_portal_after_survival,
                     spawn_shop_npcs_on_rest_level,
                     interaction_system,
+                    apply_interaction_messages,
                     heal_player_system,
                     portal_transition_system,
                     update_survival_timer,
@@ -106,13 +108,18 @@ fn spawn_player(mut commands: Commands, player_query: Query<&Player>) {
     }
 }
 
+#[allow(dead_code)]
 fn menu_input_system(
-    input: Res<ButtonInput<KeyCode>>,
-    _mouse_input: Res<ButtonInput<MouseButton>>,
+    mut ui_events: EventReader<UiActionEvent>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if input.just_pressed(KeyCode::Space) || input.just_pressed(KeyCode::Enter) {
-        next_state.set(GameState::FadingIn);
+    for event in ui_events.read() {
+        match event {
+            UiActionEvent::Submit => next_state.set(GameState::FadingIn),
+            UiActionEvent::Cancel => { /* maybe quit to title */ }
+            UiActionEvent::Navigate(_dir) => { /* move focus by dir */ }
+            UiActionEvent::Info => {}
+        }
     }
 }
 
@@ -193,16 +200,24 @@ fn despawn_all_entities(
 }
 
 fn game_over_input_system(
-    input: Res<ButtonInput<KeyCode>>,
+    mut ui_events: EventReader<UiActionEvent>,
     mut next_state: ResMut<NextState<GameState>>,
     mut camera_offset: ResMut<CameraOffset>,
 ) {
-    if input.just_pressed(KeyCode::KeyR) {
-        camera_offset.0 = IVec2::default();
-        next_state.set(GameState::Game);
-    } else if input.just_pressed(KeyCode::Escape) {
-        camera_offset.0 = IVec2::default();
-        next_state.set(GameState::Menu);
+    for event in ui_events.read() {
+        match event {
+            UiActionEvent::Submit => {
+                // restart
+                camera_offset.0 = IVec2::default();
+                next_state.set(GameState::Game);
+            }
+            UiActionEvent::Cancel => {
+                // back to menu
+                camera_offset.0 = IVec2::default();
+                next_state.set(GameState::Menu);
+            }
+            _ => {}
+        }
     }
 }
 
