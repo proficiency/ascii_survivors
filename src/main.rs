@@ -21,6 +21,14 @@ use crate::{
 
 use bevy::prelude::*;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+enum GameSet {
+    Input,
+    Gameplay,
+    Rendering,
+    Cleanup,
+}
+
 fn main() {
     App::new()
         .add_plugins((
@@ -32,6 +40,15 @@ fn main() {
             DebugPlugins,
         ))
         .add_event::<InteractionMessageEvent>()
+        .configure_sets(
+            Update,
+            (
+                GameSet::Input,
+                GameSet::Gameplay.after(GameSet::Input),
+                GameSet::Rendering.after(GameSet::Gameplay),
+                GameSet::Cleanup.after(GameSet::Rendering),
+            ),
+        )
         .add_systems(
             OnEnter(GameState::FadingIn),
             (reset_fade_timer, play_start_sound).chain(),
@@ -47,9 +64,15 @@ fn main() {
         .add_systems(
             Update,
             (
-                loading_update_system.run_if(in_state(GameState::Loading)),
-                menu_input_system.run_if(in_state(GameState::Menu)),
-                fade_in_update_system.run_if(in_state(GameState::FadingIn)),
+                loading_update_system
+                    .run_if(in_state(GameState::Loading))
+                    .in_set(GameSet::Gameplay),
+                menu_input_system
+                    .run_if(in_state(GameState::Menu))
+                    .in_set(GameSet::Input),
+                fade_in_update_system
+                    .run_if(in_state(GameState::FadingIn))
+                    .in_set(GameSet::Gameplay),
                 (
                     player_movement,
                     spawn_enemies,
@@ -85,17 +108,22 @@ fn main() {
                     despawn_entities,
                 )
                     .chain()
-                    .run_if(in_state(GameState::Game)),
-                level_transition_system.run_if(in_state(GameState::LevelTransition)),
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay),
+                level_transition_system
+                    .run_if(in_state(GameState::LevelTransition))
+                    .in_set(GameSet::Gameplay),
                 (game_over_input_system, despawn_all_entities)
-                    .run_if(in_state(GameState::GameOver)),
+                    .run_if(in_state(GameState::GameOver))
+                    .in_set(GameSet::Cleanup),
             ),
         )
         .add_systems(
             Update,
             update_lighting_overlay
                 .after(render_system)
-                .run_if(in_state(GameState::Game)),
+                .run_if(in_state(GameState::Game))
+                .in_set(GameSet::Rendering),
         )
         .run();
 }
