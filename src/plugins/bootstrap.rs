@@ -21,51 +21,28 @@ impl Plugin for BootstrapPlugin {
             TerminalPlugins,
         ))
         .init_state::<GameState>()
+        .init_resource::<SpellInputTimer>()
+        .init_resource::<EnemySpawnTimer>()
+        .init_resource::<ProjectileCooldownTimer>()
+        .init_resource::<PlayerMovementTimer>()
+        .init_resource::<EnemyMovementTimer>()
+        .init_resource::<DamageEffectTimer>()
+        .init_resource::<LoadingTimer>()
+        .init_resource::<FadeTimer>()
+        .init_resource::<SurvivalTimer>()
+        .init_resource::<LevelTransitionTimer>()
+        .init_resource::<InteractionTimer>()
+        .init_resource::<PortalTransition>()
+        .init_resource::<CameraOffset>()
+        .init_resource::<SceneLock>()
+        .init_resource::<Ruleset>()
+        .init_resource::<Level>()
+        .init_resource::<KillCount>()
         .add_systems(
             Startup,
-            (
-                add_resources,
-                spawn_terminal,
-                crate::systems::setup_lighting_overlay,
-            )
-                .chain(),
+            (spawn_terminal, crate::systems::setup_lighting_overlay).chain(),
         );
     }
-}
-
-fn add_resources(mut commands: Commands) {
-    commands.insert_resource(SpellInputTimer::default());
-    commands.insert_resource(EnemySpawnTimer(Timer::from_seconds(
-        1.25,
-        TimerMode::Repeating,
-    )));
-    commands.insert_resource(ProjectileCooldownTimer(Timer::from_seconds(
-        2.0,
-        TimerMode::Once,
-    )));
-    commands.insert_resource(PlayerMovementTimer(Timer::from_seconds(
-        0.1,
-        TimerMode::Repeating,
-    )));
-    commands.insert_resource(EnemyMovementTimer(Timer::from_seconds(
-        0.35,
-        TimerMode::Repeating,
-    )));
-    commands.insert_resource(DamageEffectTimer(Timer::from_seconds(0.5, TimerMode::Once)));
-    commands.insert_resource(LoadingTimer(Timer::from_seconds(3.0, TimerMode::Once)));
-    commands.insert_resource(FadeTimer(Timer::from_seconds(2.0, TimerMode::Once)));
-    commands.insert_resource(SurvivalTimer(Timer::from_seconds(3600.0, TimerMode::Once)));
-    commands.insert_resource(LevelTransitionTimer(Timer::from_seconds(
-        1.0,
-        TimerMode::Once,
-    )));
-    commands.insert_resource(InteractionTimer(Timer::from_seconds(0.5, TimerMode::Once)));
-    commands.insert_resource(PortalTransition::default());
-    commands.insert_resource(CameraOffset(IVec2::default()));
-    commands.insert_resource(SceneLock::default());
-    commands.insert_resource(Ruleset::default());
-    commands.insert_resource(Level::default());
-    commands.insert_resource(KillCount::default());
 }
 
 fn spawn_terminal(mut commands: Commands) {
