@@ -1,5 +1,6 @@
 mod debug;
 mod effects;
+mod events;
 mod maps;
 mod objects;
 mod plugins;
@@ -11,12 +12,13 @@ mod systems;
 use crate::{
     debug::DebugPlugins,
     effects::*,
+    events::*,
     objects::*,
+    plugins::{AsciiSurvivorsPlugins, audio::*},
     resources::*,
     scenes::*,
     spells::*,
     systems::*,
-    {audio::*, input::*, plugins::*},
 };
 
 use bevy::prelude::*;
@@ -38,6 +40,7 @@ fn main() {
             DebugPlugins,
         ))
         .add_event::<InteractionMessageEvent>()
+        .add_event::<LevelChangedEvent>()
         .configure_sets(
             Update,
             (
@@ -53,7 +56,12 @@ fn main() {
         )
         .add_systems(
             OnEnter(GameState::Game),
-            (spawn_player, maps::map::load_map_system).chain(),
+            (
+                spawn_player,
+                maps::map::load_map_system,
+                emit_level_changed_on_game_enter,
+            )
+                .chain(),
         )
         .add_systems(
             OnEnter(GameState::LevelTransition),
@@ -132,6 +140,15 @@ fn spawn_player(mut commands: Commands, player_query: Query<&Player>) {
         player.arcanum.learn_spell(SpellType::Fireball);
         commands.spawn((player, Transform::default()));
     }
+}
+
+fn emit_level_changed_on_game_enter(
+    level: Res<Level>,
+    mut level_changed_events: EventWriter<LevelChangedEvent>,
+) {
+    level_changed_events.write(LevelChangedEvent {
+        new_level: *level,
+    });
 }
 
 #[allow(dead_code)]

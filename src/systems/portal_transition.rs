@@ -1,4 +1,4 @@
-use crate::{objects::*, plugins::audio::*, resources::*};
+use crate::{events::*, objects::*, plugins::audio::*, resources::*};
 use bevy::prelude::*;
 
 pub fn portal_transition_system(
@@ -9,6 +9,7 @@ pub fn portal_transition_system(
     player_query: Query<&Player>,
     portal_query: Query<&Portal>,
     mut audio_events: EventWriter<AudioEvent>,
+    mut level_changed_events: EventWriter<LevelChangedEvent>,
 ) {
     if let Ok(player) = player_query.single() {
         let mut player_near_portal = false;
@@ -37,6 +38,7 @@ pub fn portal_transition_system(
                     if portal_transition.timer.finished() {
                         let transitioning_to_rest = matches!(level.as_ref(), Level::Survival);
 
+                        let previous_level = *level;
                         *level = match level.as_ref() {
                             Level::Survival => Level::Rest,
                             Level::Rest => Level::Survival,
@@ -47,7 +49,13 @@ pub fn portal_transition_system(
                         if transitioning_to_rest {
                             audio_events.write(AudioEvent {
                                 channel: AudioChannelType::Music,
-                                command: AudioCommand::Stop,
+                            command: AudioCommand::Stop,
+                        });
+                        }
+
+                        if *level != previous_level {
+                            level_changed_events.write(LevelChangedEvent {
+                                new_level: *level,
                             });
                         }
 

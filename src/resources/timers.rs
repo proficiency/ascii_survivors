@@ -113,3 +113,6 @@ impl Default for InteractionTimer {
         Self(Timer::from_seconds(0.5, TimerMode::Once))
     }
 }
+
+#[derive(Resource, Default)]
+pub struct UiNavRepeatTimer(pub Timer);

@@ -1,4 +1,4 @@
-use crate::{effects::*, objects::*, plugins::audio::*};
+use crate::{effects::*, events::*, objects::*, plugins::audio::*};
 use bevy::prelude::*;
 
 pub fn heal_player_system(

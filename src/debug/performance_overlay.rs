@@ -1,4 +1,4 @@
-use crate::plugins::input::UiActionEvent;
+use crate::events::*;
 use bevy::prelude::*;
 use iyes_perf_ui::prelude::*;
 pub struct PerformanceOverlayPlugin;

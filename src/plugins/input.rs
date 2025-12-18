@@ -1,5 +1,7 @@
-use crate::InteractionMessageEvent;
+use crate::events::*;
 use crate::resources::{GameState, InteractionTimer, PlayerMovementTimer};
+use crate::timers::UiNavRepeatTimer;
+use crate::{GameSet, InteractionMessageEvent};
 use bevy::input::gamepad::{GamepadConnection, GamepadEvent};
 use bevy::prelude::*;
 pub struct InputPlugin;
@@ -13,21 +15,19 @@ impl Plugin for InputPlugin {
             .add_event::<WalkEvent>()
             .add_event::<UiActionEvent>()
             .add_event::<InteractEvent>()
-            .add_event::<InteractionMessageEvent>()
             .add_systems(
                 Update,
                 (
                     select_active_gamepad,
                     dispatch_walk_events,
-                    dispatch_ui_events
-                        .run_if(in_state(GameState::Menu).or(in_state(GameState::GameOver))),
-                    dispatch_interact_events.run_if(in_state(GameState::Game)),
+                    dispatch_ui_events,
+                    dispatch_interact_events,
                 )
-                    .chain(),
+                    .chain()
+                    .in_set(GameSet::Input),
             );
     }
 }
-
 // todo: eventually we should prompt the user before the game starts to select a gamepad if multiple are connected
 // maybe we could narrow it down by checking if the string contains "Xbox" or "PlayStation"?
 fn select_active_gamepad(
@@ -145,26 +145,6 @@ fn dispatch_walk_events(
         walk_events.write(WalkEvent { direction: dir });
     }
 }
-
-// todo: move all of this somewhere more appropriate
-#[derive(Event)]
-pub struct WalkEvent {
-    pub direction: IVec2,
-}
-
-#[derive(Resource, Default)]
-struct UiNavRepeatTimer(Timer);
-
-#[derive(Event)]
-pub enum UiActionEvent {
-    Navigate(IVec2), // up/down/left/right
-    Submit,          // enter, space, or A/X buttons
-    Cancel,          // escape or B/O buttons
-    Info,            // insert or select/menu buttons
-}
-
-#[derive(Event)]
-pub struct InteractEvent;
 
 fn dispatch_ui_events(
     mut ui_events: EventWriter<UiActionEvent>,

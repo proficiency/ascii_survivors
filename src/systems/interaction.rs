@@ -1,6 +1,6 @@
 use crate::{
+    events::*,
     objects::{Interaction, InteractionType, Message, Player},
-    plugins::input::InteractEvent,
     resources::KillCount,
 };
 use bevy::prelude::*;

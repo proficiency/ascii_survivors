@@ -1,4 +1,4 @@
-use crate::{maps::*, objects::*, plugins::input::WalkEvent, resources::*};
+use crate::{events::*, maps::*, objects::*, resources::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 

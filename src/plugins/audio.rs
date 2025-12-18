@@ -1,6 +1,4 @@
-use crate::Level;
-use crate::maps::map;
-use crate::resources::GameState;
+use crate::{Level, events::*};
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 
@@ -31,13 +29,6 @@ pub enum AudioCommand {
         volume: f64,
     },
 }
-
-#[derive(Clone, Event)]
-pub struct AudioEvent {
-    pub channel: AudioChannelType,
-    pub command: AudioCommand,
-}
-
 pub struct AudioManagerPlugin;
 
 impl Plugin for AudioManagerPlugin {
@@ -46,45 +37,42 @@ impl Plugin for AudioManagerPlugin {
             .add_audio_channel::<Music>()
             .add_audio_channel::<Sfx>()
             .add_event::<AudioEvent>()
-            .add_systems(
-                OnEnter(GameState::LevelTransition), // todo: this should be on level change including game start
-                play_level_theme.after(map::load_map_system),
-            )
-            .add_systems(
-                OnEnter(GameState::Game),
-                play_level_theme.after(map::load_map_system),
-            )
-            .add_systems(Update, on_audio_event);
+            .add_systems(Update, (play_level_theme, on_audio_event));
     }
 }
 
-fn play_level_theme(level: Res<Level>, mut audio_events: EventWriter<AudioEvent>) {
-    let theme_path = match level.as_ref() {
-        Level::Rest => "sfx/loth.ogg",
-        _ => "sfx/harmony.ogg",
-    };
+fn play_level_theme(
+    mut level_changed_events: EventReader<LevelChangedEvent>,
+    mut audio_events: EventWriter<AudioEvent>,
+) {
+    for event in level_changed_events.read() {
+        let theme_path = match event.new_level {
+            Level::Rest => "sfx/loth.ogg",
+            _ => "sfx/harmony.ogg",
+        };
 
-    // 'flush' the channel before playing the level's theme
-    audio_events.write_batch([
-        AudioEvent {
-            channel: AudioChannelType::Music,
-            command: AudioCommand::Stop,
-        },
-        AudioEvent {
-            channel: AudioChannelType::Music,
-            command: AudioCommand::Play {
-                audio: theme_path,
-                looped: true,
-                volume: Some(0.15),
+        // 'flush' the channel before playing the level's theme
+        audio_events.write_batch([
+            AudioEvent {
+                channel: AudioChannelType::Music,
+                command: AudioCommand::Stop,
             },
-        },
-    ]);
+            AudioEvent {
+                channel: AudioChannelType::Music,
+                command: AudioCommand::Play {
+                    audio: theme_path,
+                    looped: true,
+                    volume: Some(0.15),
+                },
+            },
+        ]);
+    }
 }
 
 fn on_audio_event(
     mut events: EventReader<AudioEvent>,
-    music_channel: ResMut<AudioChannel<Music>>,
-    sfx_channel: ResMut<AudioChannel<Sfx>>,
+    music_channel: Res<AudioChannel<Music>>,
+    sfx_channel: Res<AudioChannel<Sfx>>,
     asset_server: Res<AssetServer>,
 ) {
     for event in events.read() {
