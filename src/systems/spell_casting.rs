@@ -1,4 +1,4 @@
-use crate::{objects::*, resources::*, spells::*};
+use crate::{objects::*, plugins::audio::*, resources::*, spells::*};
 use bevy::prelude::*;
 use bevy_ascii_terminal::Terminal;
 #[derive(Resource)]
@@ -18,6 +18,7 @@ pub fn spell_casting_system(
     time: Res<Time>,
     mut timer: ResMut<SpellInputTimer>,
     scene_lock: Res<SceneLock>,
+    mut audio_events: EventWriter<AudioEvent>,
 ) {
     timer.0.tick(time.delta());
 
@@ -64,6 +65,15 @@ pub fn spell_casting_system(
                     Some(target_entity),
                 )
                 .ok();
+
+            audio_events.write(AudioEvent {
+                channel: AudioChannelType::Sfx,
+                command: AudioCommand::Play {
+                    audio: "sfx/13_Ice_explosion_01.wav",
+                    looped: false,
+                    volume: Some(0.25),
+                },
+            });
         }
     }
 }
