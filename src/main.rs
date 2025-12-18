@@ -16,7 +16,7 @@ use crate::{
     scenes::*,
     spells::*,
     systems::*,
-    {audio::*, bootstrap::*, input::*, plugins::*},
+    {audio::*, input::*, plugins::*},
 };
 
 use bevy::prelude::*;
@@ -32,9 +32,7 @@ enum GameSet {
 fn main() {
     App::new()
         .add_plugins((
-            BootstrapPlugin, // spawn the window, terminal, and resources
-            InputPlugin,
-            AudioManagerPlugin,
+            AsciiSurvivorsPlugins,
             GameScenesPlugin,
             #[cfg(debug_assertions)]
             DebugPlugins,
