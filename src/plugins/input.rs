@@ -1,7 +1,7 @@
+use crate::InteractionMessageEvent;
 use crate::resources::{GameState, InteractionTimer, PlayerMovementTimer};
 use bevy::input::gamepad::{GamepadConnection, GamepadEvent};
 use bevy::prelude::*;
-
 pub struct InputPlugin;
 
 #[derive(Resource)]
@@ -13,6 +13,7 @@ impl Plugin for InputPlugin {
             .add_event::<WalkEvent>()
             .add_event::<UiActionEvent>()
             .add_event::<InteractEvent>()
+            .add_event::<InteractionMessageEvent>()
             .add_systems(
                 Update,
                 (
@@ -32,26 +33,32 @@ impl Plugin for InputPlugin {
 fn select_active_gamepad(
     mut commands: Commands,
     my_gamepad: Option<Res<ActiveGamepad>>,
-    mut evr_gamepad: EventReader<GamepadEvent>,
+    mut gamepad_events: EventReader<GamepadEvent>,
 ) {
-    for ev in evr_gamepad.read() {
-        let GamepadEvent::Connection(ev_conn) = ev else {
+    for event in gamepad_events.read() {
+        let GamepadEvent::Connection(connection_event) = event else {
             continue;
         };
-        match &ev_conn.connection {
+
+        match &connection_event.connection {
             GamepadConnection::Connected { name, .. } => {
                 info!("[Input] Gamepad '{}' connected", name);
 
                 if my_gamepad.is_none() {
-                    commands.insert_resource(ActiveGamepad(ev_conn.gamepad));
+                    commands.insert_resource(ActiveGamepad(connection_event.gamepad));
                     info!("[Input] Gamepad '{}' set as primary input device", name);
                 }
             }
+
             GamepadConnection::Disconnected => {
                 // todo: print name if we can get it
-                info!("[Input] Dropping active gamepad: {:?}", ev_conn.gamepad);
+                info!(
+                    "[Input] Dropping active gamepad: {:?}",
+                    connection_event.gamepad
+                );
+
                 if let Some(ActiveGamepad(old_id)) = my_gamepad.as_deref() {
-                    if *old_id == ev_conn.gamepad {
+                    if *old_id == connection_event.gamepad {
                         commands.remove_resource::<ActiveGamepad>();
                     }
                 }

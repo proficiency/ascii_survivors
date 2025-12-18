@@ -104,6 +104,7 @@ pub fn auto_cast(
                     volume: Some(0.25),
                 },
             });
+
             timer.0.reset();
         }
     }
