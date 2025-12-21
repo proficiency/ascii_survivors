@@ -16,7 +16,6 @@ pub fn spawn_portal_after_survival(
     player_query: Query<&Player>,
     portal_query: Query<&Portal>,
     terminal_query: Query<&Terminal>,
-    mut scene_lock: ResMut<SceneLock>,
     camera_offset: Res<CameraOffset>,
     level: Res<Level>,
 ) {
@@ -26,8 +25,6 @@ pub fn spawn_portal_after_survival(
 
     if survival_timer.0.elapsed_secs() >= ruleset.portal_spawn_time {
         if portal_query.is_empty() {
-            scene_lock.0 = true;
-
             if let Ok(terminal) = terminal_query.single() {
                 let terminal_size = terminal.size();
                 let width = terminal_size[0] as i32;

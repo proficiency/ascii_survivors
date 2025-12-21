@@ -79,6 +79,11 @@ fn main() {
                 fade_in_update_system
                     .run_if(in_state(GameState::FadingIn))
                     .in_set(GameSet::Gameplay),
+                update_scene_lock
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(spawn_portal_after_survival)
+                    .before(player_movement),
                 (
                     player_movement,
                     spawn_enemies,
@@ -276,7 +281,6 @@ fn setup_level_transition(
     mut player_query: Query<&mut Player>,
     mut camera_offset: ResMut<CameraOffset>,
     level: Res<Level>,
-    mut scene_lock: ResMut<SceneLock>,
 ) {
     for entity in enemy_query.iter() {
         commands.entity(entity).despawn();
@@ -296,7 +300,6 @@ fn setup_level_transition(
     camera_offset.0 = IVec2::default();
 
     if level.as_ref() == &Level::Rest {
-        scene_lock.0 = true;
         let campfire_position = IVec2::new(40, 25);
 
         commands.spawn((
@@ -306,8 +309,6 @@ fn setup_level_transition(
             LightFlicker::campfire(),
             Transform::from_xyz(campfire_position.x as f32, campfire_position.y as f32, 0.0),
         ));
-    } else {
-        scene_lock.0 = false;
     }
 }
 
