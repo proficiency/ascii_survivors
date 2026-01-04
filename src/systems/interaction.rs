@@ -25,7 +25,7 @@ pub fn interaction_system(
         return;
     }
 
-    let Ok(player) = player_query.get_single() else {
+    let Ok(player) = player_query.single() else {
         interact_events.clear();
         return;
     };

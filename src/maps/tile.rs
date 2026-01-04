@@ -11,14 +11,14 @@ pub enum TileType {
 }
 
 impl TileType {
-    pub fn is_walkable(&self) -> bool {
+    pub fn is_walkable(self) -> bool {
         match self {
             TileType::Empty | TileType::Grass | TileType::Door => true,
             TileType::Wall | TileType::Water | TileType::Stone => true,
         }
     }
 
-    pub fn to_char(&self) -> char {
+    pub fn to_char(self) -> char {
         match self {
             TileType::Empty => ' ',
             TileType::Wall => '#',
@@ -29,7 +29,7 @@ impl TileType {
         }
     }
 
-    pub fn to_color(&self) -> Color {
+    pub fn to_color(self) -> Color {
         match self {
             TileType::Empty => Color::linear_rgb(0.0, 0.0, 0.0),
             TileType::Wall => Color::linear_rgb(0.5, 0.5, 0.5),
@@ -45,7 +45,6 @@ impl TileType {
 pub struct Tile {
     pub tile_type: TileType,
     pub explored: bool,
-    pub visible: bool,
 }
 
 impl Tile {
@@ -53,7 +52,6 @@ impl Tile {
         Self {
             tile_type,
             explored: false,
-            visible: false,
         }
     }
 

@@ -20,7 +20,7 @@ pub fn setup_lighting_overlay(
         .single()
         .expect("terminal entity should exist before lighting overlay setup");
     let size = terminal.size();
-    let logical_size = UVec2::new(size[0] as u32, size[1] as u32);
+    let logical_size = UVec2::new(size[0], size[1]);
     let texture_size = logical_size * LIGHTING_PIXEL_SCALE;
     let pixel_count = (texture_size.x * texture_size.y) as usize;
 
@@ -59,6 +59,7 @@ pub fn setup_lighting_overlay(
     ));
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_lighting_overlay(
     mut overlay: ResMut<LightingOverlay>,
     mut images: ResMut<Assets<Image>>,

@@ -296,20 +296,20 @@ fn render_scene_overlays(
 
     terminal.clear();
 
-    if let Some(overlay) = fade_query.iter().next() {
-        if let Some(progress) = fade_timer.as_ref().map(|timer| timer.0.fraction()) {
-            render_fade_overlay(&mut terminal, overlay, progress);
-        }
+    if let Some(overlay) = fade_query.iter().next()
+        && let Some(progress) = fade_timer.as_ref().map(|timer| timer.0.fraction())
+    {
+        render_fade_overlay(&mut terminal, overlay, progress);
     }
 
     for text in &text_query {
         render_scene_text(&mut terminal, text);
     }
 
-    if let Some(progress_bar) = progress_query.iter().next() {
-        if let Some(progress) = loading_timer.as_ref().map(|timer| timer.0.fraction()) {
-            render_progress_bar(&mut terminal, progress_bar, progress);
-        }
+    if let Some(progress_bar) = progress_query.iter().next()
+        && let Some(progress) = loading_timer.as_ref().map(|timer| timer.0.fraction())
+    {
+        render_progress_bar(&mut terminal, progress_bar, progress);
     }
 }
 
@@ -373,7 +373,7 @@ fn render_fade_overlay(terminal: &mut Terminal, overlay: &SceneFadeOverlay, prog
     if progress < 0.8 {
         let text = "Starting...";
         let column = ((TERMINAL_WIDTH as i32 - text.len() as i32) / 2).max(0) as usize;
-        let row = (TERMINAL_HEIGHT / 2) as usize;
+        let row = TERMINAL_HEIGHT / 2;
         terminal.put_string([column, row], text);
     }
 }

@@ -1,9 +1,12 @@
-use crate::events::*;
-use crate::resources::{GameState, InteractionTimer, PlayerMovementTimer};
-use crate::timers::UiNavRepeatTimer;
-use crate::{GameSet, InteractionMessageEvent};
+use crate::{
+    GameSet,
+    events::*,
+    resources::{InteractionTimer, PlayerMovementTimer},
+    timers::UiNavRepeatTimer,
+};
 use bevy::input::gamepad::{GamepadConnection, GamepadEvent};
 use bevy::prelude::*;
+
 pub struct InputPlugin;
 
 #[derive(Resource)]
@@ -57,10 +60,10 @@ fn select_active_gamepad(
                     connection_event.gamepad
                 );
 
-                if let Some(ActiveGamepad(old_id)) = my_gamepad.as_deref() {
-                    if *old_id == connection_event.gamepad {
-                        commands.remove_resource::<ActiveGamepad>();
-                    }
+                if let Some(ActiveGamepad(old_id)) = my_gamepad.as_deref()
+                    && *old_id == connection_event.gamepad
+                {
+                    commands.remove_resource::<ActiveGamepad>();
                 }
             }
         }

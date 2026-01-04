@@ -11,21 +11,20 @@ pub struct Map {
     pub width: usize,
     pub height: usize,
     pub tiles: Vec<Vec<Tile>>,
-    pub name: String,
 }
 
+#[allow(dead_code)]
 impl Map {
-    pub fn new(width: usize, height: usize, name: String) -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         let tiles = vec![vec![Tile::empty(); height]; width];
         Self {
             width,
             height,
             tiles,
-            name,
         }
     }
 
-    pub fn from_xp_data(xp_data: &[u8], name: String) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_xp_data(xp_data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         let mut cursor = Cursor::new(xp_data);
         let xp_file = XpFile::read(&mut cursor)?;
 
@@ -38,7 +37,7 @@ impl Map {
         let width = layer.width;
         let height = layer.height;
 
-        let mut map = Map::new(width, height, name);
+        let mut map = Map::new(width, height);
 
         // convert XP cells to our tile format
         for x in 0..width {
@@ -101,14 +100,7 @@ pub fn load_map_system(mut commands: Commands, level: Res<Level>) {
 }
 
 fn create_test_map_for_level(level: Level) -> Map {
-    let map_name = match level {
-        Level::Grassland => "Grassland",
-        Level::Dungeon => "Dungeon",
-        Level::Rest => "Rest Area",
-        Level::Survival => "Survival Mode",
-    };
-
-    let mut map = Map::new(80, 50, map_name.to_string());
+    let mut map = Map::new(80, 50);
 
     match level {
         Level::Grassland => {

@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy_ascii_terminal::*;
 use rand::prelude::*;
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_enemies(
     mut commands: Commands,
     time: Res<Time>,

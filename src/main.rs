@@ -85,10 +85,10 @@ fn main() {
                     .after(spawn_portal_after_survival)
                     .before(player_movement),
                 (
+                    spawn_portal_after_survival,
                     player_movement,
                     spawn_enemies,
                     spawn_bosses,
-                    spawn_portal_after_survival,
                     spawn_shop_npcs_on_rest_level,
                     interaction_system,
                     apply_interaction_messages,
@@ -100,7 +100,6 @@ fn main() {
                         boss_ai,
                         auto_cast,
                         process_projectiles,
-                        process_fireballs,
                         process_collisions,
                         orb_movement,
                         process_orb_collection,
@@ -111,9 +110,7 @@ fn main() {
                         .chain(),
                     update_status_effect,
                     death_detection_system,
-                    spell_casting_system,
                     systems::render::render_system,
-                    spell_render_system,
                     render_message_system,
                     render_portal_transition,
                     despawn_entities,
@@ -143,6 +140,7 @@ fn spawn_player(mut commands: Commands, player_query: Query<&Player>) {
     if player_query.is_empty() {
         let mut player = Player::new(IVec2::new(40, 25));
         player.arcanum.learn_spell(SpellType::Fireball);
+        player.arcanum.learn_spell(SpellType::MagicMissile);
         commands.spawn((player, Transform::default()));
     }
 }
@@ -151,9 +149,7 @@ fn emit_level_changed_on_game_enter(
     level: Res<Level>,
     mut level_changed_events: EventWriter<LevelChangedEvent>,
 ) {
-    level_changed_events.write(LevelChangedEvent {
-        new_level: *level,
-    });
+    level_changed_events.write(LevelChangedEvent { new_level: *level });
 }
 
 #[allow(dead_code)]

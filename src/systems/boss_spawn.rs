@@ -4,6 +4,7 @@ use rand::Rng;
 
 use crate::{objects::*, resources::*};
 
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_bosses(
     mut commands: Commands,
     time: Res<Time>,

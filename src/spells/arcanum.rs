@@ -12,9 +12,10 @@ pub struct Arcanum {
     pub spells: Vec<SpellType>,
     pub mana: f32,
     pub max_mana: f32,
-    pub mana_regen_rate: f32, // todo: implement mana regeneration
+    pub mana_regen_rate: f32,
 }
 
+#[allow(dead_code)]
 impl Arcanum {
     pub fn new() -> Self {
         Self {
@@ -25,15 +26,6 @@ impl Arcanum {
         }
     }
 
-    pub fn with_mana(max_mana: f32, regen_rate: f32) -> Self {
-        Self {
-            max_mana,
-            mana: max_mana,
-            mana_regen_rate: regen_rate,
-            ..Self::new()
-        }
-    }
-
     pub fn learn_spell(&mut self, spell_type: SpellType) {
         if !self.spells.contains(&spell_type) {
             self.spells.push(spell_type);
@@ -41,12 +33,17 @@ impl Arcanum {
     }
 
     pub fn cast_spell(
-        &self,
+        &mut self,
         commands: &mut Commands,
         spell_type: SpellType,
         player_pos: IVec2,
         target: Option<Entity>,
     ) -> Result<(), &'static str> {
+        let mana_cost = self.get_spell_mana_cost(spell_type);
+        if !self.consume_mana(mana_cost) {
+            return Err("not enough mana to cast spell");
+        }
+
         match spell_type {
             SpellType::Fireball => {
                 if target.is_some() {
@@ -58,7 +55,6 @@ impl Arcanum {
                             damage: 25.0,
                             speed: 150.0,
                             lifetime: 3.0,
-                            max_lifetime: 3.0,
                         },
                         Fireball,
                     ));
@@ -76,7 +72,6 @@ impl Arcanum {
                         damage: 15.0,
                         speed: 125.0,
                         lifetime: 3.0,
-                        max_lifetime: 3.0,
                     },));
                     Ok(())
                 } else {
@@ -101,7 +96,7 @@ impl Arcanum {
     }
 
     pub fn regenerate_mana(&mut self, delta_time: f32) {
-        self.mana = (self.mana + delta_time).min(self.max_mana);
+        self.mana = (self.mana + delta_time * self.mana_regen_rate).min(self.max_mana);
     }
 
     pub fn consume_mana(&mut self, amount: f32) -> bool {

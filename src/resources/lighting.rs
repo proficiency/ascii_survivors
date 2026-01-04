@@ -13,6 +13,7 @@ pub struct LightingOverlay {
 }
 
 impl LightingOverlay {
+    #[allow(dead_code)]
     pub fn buffer_dimensions(&self) -> (usize, usize) {
         (
             (self.texture_size.x) as usize,

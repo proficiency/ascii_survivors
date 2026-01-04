@@ -10,6 +10,7 @@ impl Default for SpellInputTimer {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn spell_casting_system(
     mut commands: Commands,
     mut player_query: Query<&mut Player>,
@@ -56,12 +57,13 @@ pub fn spell_casting_system(
         }
 
         if let Some(target_entity) = nearest_target_entity {
+            let player_pos = player.world_position;
             player
                 .arcanum
                 .cast_spell(
                     &mut commands,
                     SpellType::Fireball,
-                    player.world_position,
+                    player_pos,
                     Some(target_entity),
                 )
                 .ok();
@@ -79,17 +81,17 @@ pub fn spell_casting_system(
 }
 
 pub fn spell_render_system(mut query: Query<&mut Terminal>, player_query: Query<&Player>) {
-    if let Ok(mut terminal) = query.single_mut() {
-        if let Ok(player) = player_query.single() {
-            let mana_ratio = player.arcanum.mana / player.arcanum.max_mana;
-            let bar_height = 20;
-            let filled_height = (bar_height as f32 * mana_ratio) as usize;
-            for i in 0..bar_height {
-                if i < filled_height {
-                    terminal.put_char([0, 20 + i], '█');
-                } else {
-                    terminal.put_char([0, 20 + i], '░');
-                }
+    if let Ok(mut terminal) = query.single_mut()
+        && let Ok(player) = player_query.single()
+    {
+        let mana_ratio = player.arcanum.mana / player.arcanum.max_mana;
+        let bar_height = 20;
+        let filled_height = (bar_height as f32 * mana_ratio) as usize;
+        for i in 0..bar_height {
+            if i < filled_height {
+                terminal.put_char([0, 20 + i], '|');
+            } else {
+                terminal.put_char([0, 20 + i], '.');
             }
         }
     }

@@ -75,6 +75,7 @@ pub fn draw_survival_timer(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_system(
     player_query: Query<(&Player, Option<&StatusEffect>)>,
     enemy_query: Query<&Enemy>,
@@ -122,21 +123,18 @@ fn draw_map(terminal: &mut Terminal, map: &Map, camera_offset: IVec2, terminal_s
             if terminal
                 .size()
                 .contains_point([draw_position.x, draw_position.y])
+                && let Some(tile) = map.get_tile(x as i32, y as i32)
+                && tile.explored
             {
-                if let Some(tile) = map.get_tile(x as i32, y as i32) {
-                    if tile.explored {
-                        let mut tile_char =
-                            TerminalString::from(tile.tile_type.to_char().to_string());
-                        tile_char.decoration.fg_color =
-                            Some(LinearRgba::from(tile.tile_type.to_color()));
-                        terminal.put_string([draw_position.x, draw_position.y], tile_char);
-                    }
-                }
+                let mut tile_char = TerminalString::from(tile.tile_type.to_char().to_string());
+                tile_char.decoration.fg_color = Some(LinearRgba::from(tile.tile_type.to_color()));
+                terminal.put_string([draw_position.x, draw_position.y], tile_char);
             }
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn draw_scene(
     player_query: Query<(&Player, Option<&StatusEffect>)>,
     enemy_query: Query<&Enemy>,

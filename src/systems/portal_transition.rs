@@ -1,6 +1,7 @@
 use crate::{events::*, objects::*, plugins::audio::*, resources::*};
 use bevy::prelude::*;
 
+#[allow(clippy::too_many_arguments)]
 pub fn portal_transition_system(
     time: Res<Time>,
     mut portal_transition: ResMut<PortalTransition>,
@@ -42,21 +43,20 @@ pub fn portal_transition_system(
                         *level = match level.as_ref() {
                             Level::Survival => Level::Rest,
                             Level::Rest => Level::Survival,
-                            Level::Grassland | Level::Dungeon => Level::Rest,
+                            Level::Grassland => Level::Dungeon,
+                            Level::Dungeon => Level::Survival,
                         };
 
                         // (dont) stop the music
                         if transitioning_to_rest {
                             audio_events.write(AudioEvent {
                                 channel: AudioChannelType::Music,
-                            command: AudioCommand::Stop,
-                        });
+                                command: AudioCommand::Stop,
+                            });
                         }
 
                         if *level != previous_level {
-                            level_changed_events.write(LevelChangedEvent {
-                                new_level: *level,
-                            });
+                            level_changed_events.write(LevelChangedEvent { new_level: *level });
                         }
 
                         next_state.set(GameState::LevelTransition);
@@ -113,7 +113,7 @@ pub fn render_portal_transition(
                 if distance <= radius as f32 && distance >= (radius - 1) as f32 {
                     let x = screen_pos.x + dx;
                     let y = screen_pos.y + dy;
-                    if x >= 0 && x < 80 && y >= 0 && y < 50 {
+                    if (0..80).contains(&x) && (0..50).contains(&y) {
                         let char = match portal_transition.progress {
                             p if p < 0.25 => '░',
                             p if p < 0.5 => '▒',

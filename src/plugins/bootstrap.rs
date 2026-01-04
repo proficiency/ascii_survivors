@@ -1,5 +1,4 @@
 use crate::resources::*;
-use crate::systems::*;
 use bevy::{prelude::*, window::PresentMode};
 use bevy_ascii_terminal::*;
 
@@ -21,7 +20,6 @@ impl Plugin for BootstrapPlugin {
             TerminalPlugins,
         ))
         .init_state::<GameState>()
-        .init_resource::<SpellInputTimer>()
         .init_resource::<EnemySpawnTimer>()
         .init_resource::<ProjectileCooldownTimer>()
         .init_resource::<PlayerMovementTimer>()

@@ -20,26 +20,12 @@ pub struct Projectile {
     pub damage: f32,
     pub speed: f32,
     pub lifetime: f32,
-    pub max_lifetime: f32,
-}
-
-impl Projectile {
-    pub fn new(position: IVec2, target: Option<Entity>, damage: f32, speed: f32) -> Self {
-        Self {
-            position,
-            target,
-            target_last_position: None,
-            damage,
-            speed,
-            lifetime: 3.0,
-            max_lifetime: 3.0,
-        }
-    }
 }
 
 #[derive(Component)]
 pub struct Fireball;
 
+#[allow(clippy::too_many_arguments)]
 pub fn auto_cast(
     mut commands: Commands,
     player_query: Query<&Player>,
@@ -93,7 +79,6 @@ pub fn auto_cast(
                     damage: 25.0,                // do some damage
                     speed: 85.0,                 // travel slowly
                     lifetime: 3.0,               // lifetime in seconds
-                    max_lifetime: 3.0,           // max lifetime in seconds
                 },));
             }
 
@@ -111,6 +96,7 @@ pub fn auto_cast(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_projectiles(
     mut commands: Commands,
     mut projectile_query: Query<(Entity, &mut Projectile), Without<Fireball>>,
@@ -167,11 +153,7 @@ pub fn process_projectiles(
                         .as_ivec2()
                         .clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
 
-                    if projectile.position == last_position {
-                        target_exists = false;
-                    } else {
-                        target_exists = true;
-                    }
+                    target_exists = projectile.position != last_position;
                 }
             }
 
@@ -193,6 +175,7 @@ pub fn process_projectiles(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_fireballs(
     mut commands: Commands,
     mut fireball_query: Query<(Entity, &mut Projectile, &Fireball)>,

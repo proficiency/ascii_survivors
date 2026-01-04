@@ -1,4 +1,4 @@
-use crate::events::*;
+use crate::events::UiActionEvent;
 use bevy::prelude::*;
 use iyes_perf_ui::prelude::*;
 pub struct PerformanceOverlayPlugin;
@@ -52,18 +52,15 @@ fn toggle_overlay(
 ) {
     // todo: maybe this should be a configurable keybind?
     for event in ui_events.read() {
-        match event {
-            UiActionEvent::Info => {
-                if let Ok(e) = q_root.single() {
-                    // despawn the existing Perf UI
-                    commands.entity(e).despawn();
-                } else {
-                    spawn_overlay(commands);
-                }
-
-                break;
+        if let UiActionEvent::Info = event {
+            if let Ok(e) = q_root.single() {
+                // despawn the existing Perf UI
+                commands.entity(e).despawn();
+            } else {
+                spawn_overlay(commands);
             }
-            _ => {}
+
+            break;
         }
     }
 }
