@@ -1,12 +1,13 @@
 pub mod audio;
 pub mod bootstrap;
 pub mod input;
+pub mod schedule;
 pub mod spell;
 
 // todo: put audio/input/etc into their own folders and mod.rs files, only re-exporting what's needed, like events/plugins
 use crate::plugins::{
     audio::AudioManagerPlugin, bootstrap::BootstrapPlugin, input::InputPlugin,
-    spell::SpellPlugin,
+    schedule::SchedulePlugin, spell::SpellPlugin,
 };
 use bevy::prelude::{App, Plugin};
 
@@ -19,6 +20,7 @@ impl Plugin for AsciiSurvivorsPlugins {
             InputPlugin,
             AudioManagerPlugin,
             SpellPlugin,
+            SchedulePlugin,
         ));
     }
 }
