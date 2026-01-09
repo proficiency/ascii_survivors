@@ -5,7 +5,7 @@ use crate::systems::{
     render_message_system, render_system, spell_casting_system, spell_render_system,
     SpellInputTimer,
 };
-use crate::GameSet;
+use crate::plugins::schedule::GameSet;
 use bevy::prelude::*;
 
 pub struct SpellPlugin;

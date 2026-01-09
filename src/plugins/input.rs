@@ -1,8 +1,7 @@
 use crate::{
-    GameSet,
     events::*,
-    resources::{InteractionTimer, PlayerMovementTimer},
-    timers::UiNavRepeatTimer,
+    plugins::schedule::GameSet,
+    resources::{InteractionTimer, PlayerMovementTimer, UiNavRepeatTimer},
 };
 use bevy::input::gamepad::{GamepadConnection, GamepadEvent};
 use bevy::prelude::*;

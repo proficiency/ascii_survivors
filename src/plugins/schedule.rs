@@ -1,33 +1,146 @@
-use crate::resources::GameState;
 use crate::{
-    GameSet,
     effects::update_status_effect,
-    events::{AudioEvent, LevelChangedEvent, UiActionEvent},
+    events::{AudioEvent, LevelChangedEvent},
     maps,
-    objects::*,
+    objects::{
+        interaction::{Interaction, InteractionType},
+        *,
+    },
     plugins::audio::{AudioChannelType, AudioCommand},
     resources::*,
     spells::SpellType,
-    systems::{InteractionMessageEvent, despawn_portals, spawn_portal_after_survival},
+    systems::*,
 };
 use bevy::prelude::*;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum GameSet {
+    Input,
+    Gameplay,
+    Rendering,
+    Cleanup,
+}
+
+pub struct PlayerMovementPlugin;
+pub struct PlayerCombatPlugin;
+pub struct EnemyMovementPlugin;
+pub struct EnemyCombatPlugin;
+pub struct PlayerPlugin;
+pub struct EnemyPlugin;
 pub struct SchedulePlugin;
+
+impl Plugin for PlayerMovementPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                player_movement
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(update_scene_lock)
+                    .after(spawn_portal_after_survival)
+                    .before(spawn_enemies),
+                orb_movement
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(process_collisions),
+                process_orb_collection
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(orb_movement),
+            ),
+        );
+    }
+}
+
+impl Plugin for PlayerCombatPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                auto_cast
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(boss_ai)
+                    .after(portal_transition_system),
+                process_projectiles
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(auto_cast),
+            ),
+        );
+    }
+}
+
+impl Plugin for EnemyMovementPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                enemy_ai
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(portal_transition_system)
+                    .after(spawn_enemies)
+                    .after(spawn_bosses),
+                boss_ai
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(enemy_ai)
+                    .after(spawn_bosses),
+            ),
+        );
+    }
+}
+
+impl Plugin for EnemyCombatPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            process_collisions
+                .run_if(in_state(GameState::Game))
+                .in_set(GameSet::Gameplay)
+                .after(process_projectiles),
+        );
+    }
+}
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins((PlayerMovementPlugin, PlayerCombatPlugin));
+    }
+}
+
+impl Plugin for EnemyPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins((EnemyMovementPlugin, EnemyCombatPlugin));
+    }
+}
 
 impl Plugin for SchedulePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<InteractionMessageEvent>()
             .add_event::<LevelChangedEvent>()
-            .add_systems(
-                OnEnter(GameState::FadingIn),
-                (reset_fade_timer, play_start_sound).chain(),
+            .add_plugins((PlayerPlugin, EnemyPlugin))
+            .configure_sets(
+                Update,
+                (
+                    GameSet::Input,
+                    GameSet::Gameplay.after(GameSet::Input),
+                    GameSet::Rendering.after(GameSet::Gameplay),
+                    GameSet::Cleanup.after(GameSet::Rendering),
+                ),
             )
             .add_systems(
                 OnEnter(GameState::Game),
                 (
                     spawn_player,
                     maps::map::load_map_system,
-                    emit_level_changed_on_game_enter,
+                    |level: Res<Level>,
+                     mut level_changed_events: EventWriter<LevelChangedEvent>| {
+                        // write level changed event
+                        level_changed_events.write(LevelChangedEvent { new_level: *level });
+                    },
                 )
                     .chain(),
             )
@@ -38,15 +151,6 @@ impl Plugin for SchedulePlugin {
             .add_systems(
                 Update,
                 (
-                    loading_update_system
-                        .run_if(in_state(GameState::Loading))
-                        .in_set(GameSet::Gameplay),
-                    menu_input_system
-                        .run_if(in_state(GameState::Menu))
-                        .in_set(GameSet::Input),
-                    fade_in_update_system
-                        .run_if(in_state(GameState::FadingIn))
-                        .in_set(GameSet::Gameplay),
                     update_survival_timer
                         .run_if(in_state(GameState::Game))
                         .in_set(GameSet::Gameplay)
@@ -58,11 +162,45 @@ impl Plugin for SchedulePlugin {
                     level_transition_system
                         .run_if(in_state(GameState::LevelTransition))
                         .in_set(GameSet::Gameplay),
-                    (game_over_input_system, despawn_all_entities)
-                        .chain()
-                        .run_if(in_state(GameState::GameOver))
-                        .in_set(GameSet::Cleanup),
                 ),
+            )
+            .add_systems(
+                Update,
+                (
+                    update_scene_lock
+                        .run_if(in_state(GameState::Game))
+                        .in_set(GameSet::Gameplay)
+                        .after(spawn_portal_after_survival)
+                        .before(player_movement),
+                    (
+                        spawn_portal_after_survival,
+                        spawn_enemies,
+                        spawn_bosses,
+                        spawn_shop_npcs_on_rest_level,
+                        interaction_system,
+                        apply_interaction_messages,
+                        heal_player_system,
+                        portal_transition_system,
+                        campfire_animation_system,
+                        ember_animation_system,
+                        light_flicker_system,
+                        update_status_effect.after(process_orb_collection),
+                        render_system,
+                        render_message_system,
+                        render_portal_transition,
+                        despawn_entities,
+                    )
+                        .chain()
+                        .run_if(in_state(GameState::Game))
+                        .in_set(GameSet::Gameplay),
+                ),
+            )
+            .add_systems(
+                Update,
+                update_lighting_overlay
+                    .after(render_system)
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Rendering),
             );
     }
 }
@@ -76,67 +214,6 @@ fn spawn_player(mut commands: Commands, player_query: Query<&Player>) {
     }
 }
 
-fn emit_level_changed_on_game_enter(
-    level: Res<Level>,
-    mut level_changed_events: EventWriter<LevelChangedEvent>,
-) {
-    level_changed_events.write(LevelChangedEvent { new_level: *level });
-}
-
-#[allow(dead_code)]
-fn menu_input_system(
-    mut ui_events: EventReader<UiActionEvent>,
-    mut next_state: ResMut<NextState<GameState>>,
-) {
-    for event in ui_events.read() {
-        match event {
-            UiActionEvent::Submit => next_state.set(GameState::FadingIn),
-            UiActionEvent::Cancel => { /* maybe quit to title */ }
-            UiActionEvent::Navigate(_dir) => { /* move focus by dir */ }
-            UiActionEvent::Info => {}
-        }
-    }
-}
-
-fn loading_update_system(
-    time: Res<Time>,
-    mut loading_timer: ResMut<LoadingTimer>,
-    mut next_state: ResMut<NextState<GameState>>,
-) {
-    loading_timer.0.tick(time.delta());
-
-    if loading_timer.0.finished() {
-        next_state.set(GameState::Menu);
-    }
-}
-
-fn reset_fade_timer(mut fade_timer: ResMut<FadeTimer>) {
-    fade_timer.0.reset();
-}
-
-fn play_start_sound(mut audio_events: EventWriter<AudioEvent>) {
-    audio_events.write(AudioEvent {
-        channel: AudioChannelType::Sfx,
-        command: AudioCommand::Play {
-            audio: "sfx/start.wav",
-            looped: false,
-            volume: Some(0.5),
-        },
-    });
-}
-
-fn fade_in_update_system(
-    time: Res<Time>,
-    mut fade_timer: ResMut<FadeTimer>,
-    mut next_state: ResMut<NextState<GameState>>,
-) {
-    fade_timer.0.tick(time.delta());
-
-    if fade_timer.0.finished() {
-        next_state.set(GameState::Game);
-    }
-}
-
 fn death_detection_system(
     player_query: Query<&Player>,
     mut next_state: ResMut<NextState<GameState>>,
@@ -145,7 +222,10 @@ fn death_detection_system(
     if let Ok(player) = player_query.single()
         && player.health <= 0.0
     {
+        // transition to game-over state
         next_state.set(GameState::GameOver);
+
+        // stop the music
         audio_events.write(AudioEvent {
             channel: AudioChannelType::Music,
             command: AudioCommand::Stop,
@@ -153,85 +233,49 @@ fn death_detection_system(
     }
 }
 
-fn despawn_all_entities(
-    mut commands: Commands,
-    player_query: Query<Entity, With<Player>>,
-    enemy_query: Query<Entity, With<Enemy>>,
-    projectile_query: Query<Entity, With<Projectile>>,
-    orb_query: Query<Entity, With<Orb>>,
-) {
-    for entity in player_query.iter() {
-        commands.entity(entity).despawn();
-    }
-    for entity in enemy_query.iter() {
-        commands.entity(entity).despawn();
-    }
-    for entity in projectile_query.iter() {
-        commands.entity(entity).despawn();
-    }
-    for entity in orb_query.iter() {
-        commands.entity(entity).despawn();
-    }
-}
-
-fn game_over_input_system(
-    mut ui_events: EventReader<UiActionEvent>,
-    mut next_state: ResMut<NextState<GameState>>,
-    mut camera_offset: ResMut<CameraOffset>,
-) {
-    for event in ui_events.read() {
-        match event {
-            UiActionEvent::Submit => {
-                // restart
-                camera_offset.0 = IVec2::default();
-                next_state.set(GameState::Game);
-            }
-            UiActionEvent::Cancel => {
-                // back to menu
-                camera_offset.0 = IVec2::default();
-                next_state.set(GameState::Menu);
-            }
-            _ => {}
-        }
-    }
-}
-
 fn update_survival_timer(time: Res<Time>, mut survival_timer: ResMut<SurvivalTimer>) {
     survival_timer.0.tick(time.delta());
 }
 
+#[allow(clippy::too_many_arguments)]
 fn setup_level_transition(
     mut commands: Commands,
     enemy_query: Query<Entity, With<Enemy>>,
     projectile_query: Query<Entity, With<Projectile>>,
     orb_query: Query<Entity, With<Orb>>,
+    boss_query: Query<Entity, With<Boss>>,
     mut player_query: Query<&mut Player>,
     mut camera_offset: ResMut<CameraOffset>,
     level: Res<Level>,
 ) {
-    for entity in enemy_query.iter() {
-        commands.entity(entity).despawn();
+    // despawn
+    for enemy in enemy_query.iter() {
+        commands.entity(enemy).despawn();
     }
-    for entity in projectile_query.iter() {
-        commands.entity(entity).despawn();
+    for boss in boss_query.iter() {
+        commands.entity(boss).despawn();
     }
-    for entity in orb_query.iter() {
-        commands.entity(entity).despawn();
+    for projectile in projectile_query.iter() {
+        commands.entity(projectile).despawn();
+    }
+    for orb in orb_query.iter() {
+        commands.entity(orb).despawn();
     }
 
+    // reposition the player and camera
     if let Ok(mut player) = player_query.single_mut() {
         player.position = IVec2::new(40, 25);
         player.world_position = IVec2::new(40, 25);
     }
-
     camera_offset.0 = IVec2::default();
 
+    // spawn campfire on rest level
     if level.as_ref() == &Level::Rest {
         let campfire_position = IVec2::new(40, 25);
 
         commands.spawn((
             Campfire::new(campfire_position),
-            crate::objects::Interaction::new(InteractionType::Campfire), // todo: maybe we should reconsider naming it 'Interaction'
+            Interaction::new(InteractionType::Campfire),
             LightEmitter::campfire(),
             LightFlicker::campfire(),
             Transform::from_xyz(campfire_position.x as f32, campfire_position.y as f32, 0.0),

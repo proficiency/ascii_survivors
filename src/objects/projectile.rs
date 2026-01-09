@@ -1,4 +1,4 @@
-use crate::CameraOffset;
+use crate::resources::CameraOffset;
 use crate::events::*;
 use crate::objects::boss::Boss;
 use crate::objects::enemy::Enemy;

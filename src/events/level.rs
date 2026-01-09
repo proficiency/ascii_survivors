@@ -1,4 +1,4 @@
-use crate::Level;
+use crate::resources::Level;
 use bevy::prelude::*;
 
 #[derive(Clone, Copy, Event)]
