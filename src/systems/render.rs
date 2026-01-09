@@ -343,7 +343,7 @@ pub fn draw_scene(
                     max_value: player.max_health as usize,
                     bar_color: Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
                     bar_x_position: 0,
-                    bar_y_position: 0,
+                    bar_y_position: 47,
                 },
             );
             draw_resource_bar(
@@ -356,7 +356,7 @@ pub fn draw_scene(
                     max_value: player.arcanum.max_mana as usize,
                     bar_color: Color::linear_rgba(0.15, 0.45, 1.0, 1.0),
                     bar_x_position: 0,
-                    bar_y_position: 1,
+                    bar_y_position: 48,
                 },
             );
             draw_resource_bar(

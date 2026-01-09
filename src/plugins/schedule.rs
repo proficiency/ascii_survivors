@@ -1,6 +1,6 @@
 use crate::{
     effects::update_status_effect,
-    events::{AudioEvent, LevelChangedEvent},
+    events::{AudioEvent, LevelChangedEvent, LevelUpEvent},
     maps,
     objects::{
         interaction::{Interaction, InteractionType},
@@ -216,7 +216,14 @@ impl Plugin for AmbientPlugin {
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((PlayerMovementPlugin, PlayerCombatPlugin));
+        app.add_plugins((PlayerMovementPlugin, PlayerCombatPlugin))
+            .add_systems(
+                Update,
+                level_up_system
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(process_orb_collection),
+            );
     }
 }
 
@@ -230,6 +237,7 @@ impl Plugin for SchedulePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<InteractionMessageEvent>()
             .add_event::<LevelChangedEvent>()
+            .add_event::<LevelUpEvent>()
             .add_plugins((
                 PlayerPlugin,
                 EnemyPlugin,

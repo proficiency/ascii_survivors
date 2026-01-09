@@ -1,10 +1,10 @@
-use crate::resources::CameraOffset;
 use crate::events::*;
 use crate::objects::boss::Boss;
 use crate::objects::enemy::Enemy;
 use crate::objects::orb::Orb;
 use crate::objects::player::Player;
 use crate::plugins::audio::*;
+use crate::resources::CameraOffset;
 use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
 use crate::resources::timers::ProjectileCooldownTimer;
@@ -224,7 +224,6 @@ pub fn process_fireballs(
                     commands.entity(entity).insert(Despawn);
                     continue;
                 } else {
-                    // Move toward target
                     let move_vector = direction.normalize_or_zero() * speed;
                     fireball.position += move_vector.as_ivec2();
                     target_exists = true;

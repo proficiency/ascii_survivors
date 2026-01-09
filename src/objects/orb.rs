@@ -1,4 +1,4 @@
-use crate::{objects::*, resources::*, systems::Despawn};
+use crate::{events::LevelUpEvent, objects::*, resources::*, systems::Despawn};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -18,7 +18,6 @@ impl Orb {
     }
 }
 
-/// orbs within a certain radius will move towards the player with increasing speed.
 pub fn orb_movement(
     mut orb_query: Query<&mut Orb>,
     player_query: Query<&Player>,
@@ -51,11 +50,12 @@ pub fn orb_movement(
 /// when an orb is within 1 unit of the player, it is despawned and the player gains experience.
 pub fn process_orb_collection(
     mut commands: Commands,
-    mut player_query: Query<&mut Player>,
+    mut player_query: Query<(Entity, &mut Player)>,
     orb_query: Query<(Entity, &Orb)>,
+    mut level_up_events: EventWriter<LevelUpEvent>,
     _camera_offset: Res<CameraOffset>,
 ) {
-    if let Ok(mut player) = player_query.single_mut() {
+    if let Ok((player_entity, mut player)) = player_query.single_mut() {
         let player_world_pos = player.world_position;
 
         for (orb_entity, orb) in orb_query.iter() {
@@ -64,11 +64,14 @@ pub fn process_orb_collection(
                 player.experience += orb.experience;
                 commands.entity(orb_entity).insert(Despawn);
 
-                // Check for level up
                 while player.experience >= player.experience_to_next_level {
                     player.experience -= player.experience_to_next_level;
                     player.level += 1;
                     player.experience_to_next_level = experience_for_level(player.level);
+                    level_up_events.write(LevelUpEvent {
+                        entity: player_entity,
+                        new_level: player.level,
+                    });
                 }
             }
         }
