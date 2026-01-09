@@ -9,14 +9,13 @@ mod scenes;
 mod spells;
 mod systems;
 
-use crate::{debug::DebugPlugins, plugins::AsciiSurvivorsPlugins, scenes::GameScenesPlugin};
+use crate::{debug::DebugPlugins, plugins::AsciiSurvivorsPlugins};
 use bevy::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins((
             AsciiSurvivorsPlugins,
-            GameScenesPlugin,
             #[cfg(debug_assertions)]
             DebugPlugins,
         ))

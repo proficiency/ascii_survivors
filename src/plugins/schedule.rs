@@ -25,6 +25,11 @@ pub struct PlayerMovementPlugin;
 pub struct PlayerCombatPlugin;
 pub struct EnemyMovementPlugin;
 pub struct EnemyCombatPlugin;
+pub struct DespawnPlugin;
+pub struct SpawnPlugin;
+pub struct InteractionPlugin;
+pub struct RenderingPlugin;
+pub struct AmbientPlugin;
 pub struct PlayerPlugin;
 pub struct EnemyPlugin;
 pub struct SchedulePlugin;
@@ -105,6 +110,110 @@ impl Plugin for EnemyCombatPlugin {
     }
 }
 
+impl Plugin for SpawnPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            OnEnter(GameState::Game),
+            (
+                spawn_player,
+                maps::map::load_map_system,
+                |level: Res<Level>, mut level_changed_events: EventWriter<LevelChangedEvent>| {
+                    // write level changed event
+                    level_changed_events.write(LevelChangedEvent { new_level: *level });
+                },
+            )
+                .chain(),
+        )
+        .add_systems(
+            Update,
+            (
+                spawn_portal_after_survival,
+                spawn_enemies,
+                spawn_bosses,
+                spawn_shop_npcs_on_rest_level,
+            )
+                .run_if(in_state(GameState::Game))
+                .in_set(GameSet::Gameplay),
+        );
+    }
+}
+
+impl Plugin for DespawnPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            despawn_entities
+                .run_if(in_state(GameState::Game))
+                .in_set(GameSet::Gameplay)
+                .after(render_portal_transition),
+        );
+    }
+}
+
+impl Plugin for InteractionPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                interaction_system,
+                apply_interaction_messages,
+                heal_player_system,
+                portal_transition_system,
+            )
+                .chain()
+                .run_if(in_state(GameState::Game))
+                .in_set(GameSet::Gameplay)
+                .after(spawn_shop_npcs_on_rest_level),
+        );
+    }
+}
+
+impl Plugin for RenderingPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                render_system,
+                render_message_system,
+                render_portal_transition,
+            )
+                .chain()
+                .run_if(in_state(GameState::Game))
+                .in_set(GameSet::Gameplay)
+                .after(update_status_effect),
+        )
+        .add_systems(
+            Update,
+            update_lighting_overlay
+                .after(render_system)
+                .run_if(in_state(GameState::Game))
+                .in_set(GameSet::Rendering),
+        );
+    }
+}
+
+impl Plugin for AmbientPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                update_scene_lock
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(spawn_portal_after_survival)
+                    .before(player_movement),
+                campfire_animation_system,
+                ember_animation_system,
+                light_flicker_system,
+                update_status_effect.after(process_orb_collection),
+            )
+                .chain()
+                .run_if(in_state(GameState::Game))
+                .in_set(GameSet::Gameplay),
+        );
+    }
+}
+
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((PlayerMovementPlugin, PlayerCombatPlugin));
@@ -121,7 +230,15 @@ impl Plugin for SchedulePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<InteractionMessageEvent>()
             .add_event::<LevelChangedEvent>()
-            .add_plugins((PlayerPlugin, EnemyPlugin))
+            .add_plugins((
+                PlayerPlugin,
+                EnemyPlugin,
+                SpawnPlugin,
+                DespawnPlugin,
+                InteractionPlugin,
+                RenderingPlugin,
+                AmbientPlugin,
+            ))
             .configure_sets(
                 Update,
                 (
@@ -130,19 +247,6 @@ impl Plugin for SchedulePlugin {
                     GameSet::Rendering.after(GameSet::Gameplay),
                     GameSet::Cleanup.after(GameSet::Rendering),
                 ),
-            )
-            .add_systems(
-                OnEnter(GameState::Game),
-                (
-                    spawn_player,
-                    maps::map::load_map_system,
-                    |level: Res<Level>,
-                     mut level_changed_events: EventWriter<LevelChangedEvent>| {
-                        // write level changed event
-                        level_changed_events.write(LevelChangedEvent { new_level: *level });
-                    },
-                )
-                    .chain(),
             )
             .add_systems(
                 OnEnter(GameState::LevelTransition),
@@ -163,44 +267,6 @@ impl Plugin for SchedulePlugin {
                         .run_if(in_state(GameState::LevelTransition))
                         .in_set(GameSet::Gameplay),
                 ),
-            )
-            .add_systems(
-                Update,
-                (
-                    update_scene_lock
-                        .run_if(in_state(GameState::Game))
-                        .in_set(GameSet::Gameplay)
-                        .after(spawn_portal_after_survival)
-                        .before(player_movement),
-                    (
-                        spawn_portal_after_survival,
-                        spawn_enemies,
-                        spawn_bosses,
-                        spawn_shop_npcs_on_rest_level,
-                        interaction_system,
-                        apply_interaction_messages,
-                        heal_player_system,
-                        portal_transition_system,
-                        campfire_animation_system,
-                        ember_animation_system,
-                        light_flicker_system,
-                        update_status_effect.after(process_orb_collection),
-                        render_system,
-                        render_message_system,
-                        render_portal_transition,
-                        despawn_entities,
-                    )
-                        .chain()
-                        .run_if(in_state(GameState::Game))
-                        .in_set(GameSet::Gameplay),
-                ),
-            )
-            .add_systems(
-                Update,
-                update_lighting_overlay
-                    .after(render_system)
-                    .run_if(in_state(GameState::Game))
-                    .in_set(GameSet::Rendering),
             );
     }
 }
