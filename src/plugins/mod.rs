@@ -10,10 +10,11 @@ use crate::plugins::{
     audio::AudioManagerPlugin,
     bootstrap::BootstrapPlugin,
     input::InputPlugin,
-    scene::{GameScenesPlugin, ScenePlugin},
+    scene::ScenePlugin,
     schedule::SchedulePlugin,
     spell::SpellPlugin,
 };
+use crate::scenes::GameScenesPlugin;
 use bevy::prelude::{App, Plugin};
 
 pub struct AsciiSurvivorsPlugins;

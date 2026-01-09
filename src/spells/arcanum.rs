@@ -22,7 +22,7 @@ impl Arcanum {
             spells: Vec::new(),
             mana: 100.0,
             max_mana: 100.0,
-            mana_regen_rate: 1.0,
+            mana_regen_rate: 600.0,
         }
     }
 
@@ -30,6 +30,11 @@ impl Arcanum {
         if !self.spells.contains(&spell_type) {
             self.spells.push(spell_type);
         }
+    }
+
+    pub fn can_cast_spell(&self, spell_type: SpellType) -> bool {
+        let mana_cost = self.get_spell_mana_cost(spell_type);
+        self.mana >= mana_cost && self.spells.contains(&spell_type)
     }
 
     pub fn cast_spell(
@@ -81,14 +86,14 @@ impl Arcanum {
         }
     }
 
-    fn get_spell_mana_cost(&self, spell_type: SpellType) -> f32 {
+    pub fn get_spell_mana_cost(&self, spell_type: SpellType) -> f32 {
         match spell_type {
             SpellType::Fireball => 20.0,
             SpellType::MagicMissile => 15.0,
         }
     }
 
-    fn get_spell_name(&self, spell_type: SpellType) -> &'static str {
+    pub fn get_spell_name(&self, spell_type: SpellType) -> &'static str {
         match spell_type {
             SpellType::Fireball => "Fireball",
             SpellType::MagicMissile => "Magic Missile",

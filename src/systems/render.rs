@@ -336,7 +336,7 @@ pub fn draw_scene(
             draw_resource_bar(
                 terminal_query,
                 ResourceBarConfig {
-                    resource_name: "HP",
+                    resource_name: "Health",
                     filled_char: '#',
                     bar_length: 20,
                     current_value: player.health as usize,
@@ -344,6 +344,19 @@ pub fn draw_scene(
                     bar_color: Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
                     bar_x_position: 0,
                     bar_y_position: 0,
+                },
+            );
+            draw_resource_bar(
+                terminal_query,
+                ResourceBarConfig {
+                    resource_name: "Mana",
+                    filled_char: '#',
+                    bar_length: 20,
+                    current_value: player.arcanum.mana as usize,
+                    max_value: player.arcanum.max_mana as usize,
+                    bar_color: Color::linear_rgba(0.15, 0.45, 1.0, 1.0),
+                    bar_x_position: 0,
+                    bar_y_position: 1,
                 },
             );
             draw_resource_bar(

@@ -1,11 +1,8 @@
 use crate::effects::update_status_effect;
 use crate::objects::{process_fireballs, process_projectiles};
-use crate::resources::GameState;
-use crate::systems::{
-    render_message_system, render_system, spell_casting_system, spell_render_system,
-    SpellInputTimer,
-};
 use crate::plugins::schedule::GameSet;
+use crate::resources::GameState;
+use crate::systems::{SpellInputTimer, render_system, spell_casting_system};
 use bevy::prelude::*;
 
 pub struct SpellPlugin;
@@ -28,14 +25,6 @@ impl Plugin for SpellPlugin {
                     .in_set(GameSet::Gameplay)
                     .after(update_status_effect)
                     .before(render_system),
-            )
-            .add_systems(
-                Update,
-                spell_render_system
-                    .run_if(in_state(GameState::Game))
-                    .in_set(GameSet::Gameplay)
-                    .after(render_system)
-                    .before(render_message_system),
             );
     }
 }

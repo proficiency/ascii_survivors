@@ -1,6 +1,5 @@
 use crate::{events::*, objects::*, plugins::audio::*, resources::*, spells::*};
 use bevy::prelude::*;
-use bevy_ascii_terminal::Terminal;
 #[derive(Resource)]
 pub struct SpellInputTimer(pub Timer);
 
@@ -29,6 +28,9 @@ pub fn spell_casting_system(
 
     if let Ok(mut player) = player_query.single_mut() {
         player.arcanum.regenerate_mana(time.delta_secs());
+        if !player.arcanum.can_cast_spell(SpellType::Fireball) {
+            return;
+        }
 
         let mut nearest_target_entity: Option<Entity> = None;
         let mut min_distance = i32::MAX;
@@ -76,23 +78,6 @@ pub fn spell_casting_system(
                     volume: Some(0.25),
                 },
             });
-        }
-    }
-}
-
-pub fn spell_render_system(mut query: Query<&mut Terminal>, player_query: Query<&Player>) {
-    if let Ok(mut terminal) = query.single_mut()
-        && let Ok(player) = player_query.single()
-    {
-        let mana_ratio = player.arcanum.mana / player.arcanum.max_mana;
-        let bar_height = 20;
-        let filled_height = (bar_height as f32 * mana_ratio) as usize;
-        for i in 0..bar_height {
-            if i < filled_height {
-                terminal.put_char([0, 20 + i], '|');
-            } else {
-                terminal.put_char([0, 20 + i], '.');
-            }
         }
     }
 }
