@@ -1,6 +1,5 @@
 use crate::{maps::Map, objects::*, resources::*};
 use bevy::prelude::*;
-use bevy_ascii_terminal::Terminal;
 use rand::prelude::*;
 use std::collections::VecDeque;
 
@@ -18,7 +17,7 @@ pub fn spawn_portal_after_survival(
     ruleset: Res<Ruleset>,
     player_query: Query<&Player>,
     portal_query: Query<&Portal>,
-    terminal_query: Query<&Terminal>,
+    grid: Res<AsciiGrid>,
     camera_offset: Res<CameraOffset>,
     level: Res<Level>,
     map: Option<Res<Map>>,
@@ -27,13 +26,9 @@ pub fn spawn_portal_after_survival(
         return;
     }
 
-    if survival_timer.0.elapsed_secs() >= ruleset.portal_spawn_time
-        && portal_query.is_empty()
-        && let Ok(terminal) = terminal_query.single()
-    {
-        let terminal_size = terminal.size();
-        let width = terminal_size[0] as i32;
-        let height = terminal_size[1] as i32;
+    if survival_timer.0.elapsed_secs() >= ruleset.portal_spawn_time && portal_query.is_empty() {
+        let width = grid.grid_size.x as i32;
+        let height = grid.grid_size.y as i32;
         let min_x = camera_offset.0.x + PORTAL_SPAWN_MARGIN;
         let max_x = min_x + width - 1 - 2 * PORTAL_SPAWN_MARGIN;
         let min_y = camera_offset.0.y + PORTAL_SPAWN_MARGIN;

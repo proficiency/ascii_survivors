@@ -95,17 +95,20 @@ pub fn portal_transition_system(
 }
 
 pub fn render_portal_transition(
-    mut query: Query<&mut bevy_ascii_terminal::Terminal>,
+    mut frame: ResMut<AsciiFrame>,
+    grid: Res<AsciiGrid>,
     portal_transition: Res<PortalTransition>,
     player_query: Query<&Player>,
+    portal_query: Query<&Portal>,
     camera_offset: Res<CameraOffset>,
 ) {
     if portal_transition.progress <= 0.0 {
         return;
     }
 
-    if let (Ok(mut terminal), Ok(player)) = (query.single_mut(), player_query.single()) {
-        let screen_pos = player.world_position - camera_offset.0;
+    if let (Ok(_player), Some(portal)) = (player_query.single(), portal_query.iter().next()) {
+        let portal_world = portal.position;
+        let screen_pos = world_to_screen(portal_world - camera_offset.0, grid.grid_size);
         let radius = (portal_transition.progress * 20.0) as i32;
         for dy in -radius..=radius {
             for dx in -radius..=radius {
@@ -113,17 +116,26 @@ pub fn render_portal_transition(
                 if distance <= radius as f32 && distance >= (radius - 1) as f32 {
                     let x = screen_pos.x + dx;
                     let y = screen_pos.y + dy;
-                    if (0..80).contains(&x) && (0..50).contains(&y) {
-                        let char = match portal_transition.progress {
-                            p if p < 0.25 => '░',
-                            p if p < 0.5 => '▒',
-                            p if p < 0.75 => '▓',
-                            _ => '█',
+                    if (0..grid.grid_size.x as i32).contains(&x)
+                        && (0..grid.grid_size.y as i32).contains(&y)
+                    {
+                        let ch = match portal_transition.progress {
+                            p if p < 0.25 => '.',
+                            p if p < 0.5 => '*',
+                            p if p < 0.75 => '+',
+                            _ => '#',
                         };
-                        terminal.put_char([x as usize, y as usize], char);
+                        frame.put_char(IVec2::new(x, y), ch, Color::WHITE, Color::NONE);
                     }
                 }
             }
         }
     }
+}
+
+fn world_to_screen(world_position: IVec2, grid_size: UVec2) -> IVec2 {
+    IVec2::new(
+        world_position.x,
+        grid_size.y as i32 - 1 - world_position.y,
+    )
 }

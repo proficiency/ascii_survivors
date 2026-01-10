@@ -5,12 +5,8 @@ use bevy::{
     scene::{DynamicScene, InstanceId, SceneSpawner},
 };
 
-use bevy_ascii_terminal::Terminal;
-
-use crate::resources::{FadeTimer, GameState, LoadingTimer};
-
-const TERMINAL_WIDTH: usize = 80;
-const TERMINAL_HEIGHT: usize = 50;
+use crate::plugins::schedule::GameSet;
+use crate::resources::{AsciiFrame, AsciiGrid, FadeTimer, GameState, LoadingTimer};
 
 pub struct GameScenesPlugin;
 
@@ -23,7 +19,7 @@ impl Plugin for GameScenesPlugin {
             .init_resource::<SceneAssets>()
             .init_resource::<ActiveSceneInstances>()
             .add_systems(Startup, setup_scene_assets)
-            .add_systems(Update, render_scene_overlays)
+            .add_systems(Update, render_scene_overlays.in_set(GameSet::Rendering))
             .add_systems(OnEnter(GameState::Loading), spawn_loading_scene)
             .add_systems(OnExit(GameState::Loading), despawn_loading_scene)
             .add_systems(OnEnter(GameState::Menu), spawn_menu_scene)
@@ -278,7 +274,8 @@ fn despawn_scene_instance(
 }
 
 fn render_scene_overlays(
-    mut terminal_query: Query<&mut Terminal>,
+    mut frame: ResMut<AsciiFrame>,
+    grid: Res<AsciiGrid>,
     text_query: Query<&SceneText>,
     progress_query: Query<&SceneProgressBar>,
     fade_query: Query<&SceneFadeOverlay>,
@@ -290,56 +287,78 @@ fn render_scene_overlays(
         return;
     }
 
-    let Ok(mut terminal) = terminal_query.single_mut() else {
-        return;
-    };
-
-    terminal.clear();
+    frame.clear();
 
     if let Some(overlay) = fade_query.iter().next()
         && let Some(progress) = fade_timer.as_ref().map(|timer| timer.0.fraction())
     {
-        render_fade_overlay(&mut terminal, overlay, progress);
+        render_fade_overlay(&mut frame, &grid, overlay, progress);
     }
 
     for text in &text_query {
-        render_scene_text(&mut terminal, text);
+        render_scene_text(&mut frame, &grid, text);
     }
 
     if let Some(progress_bar) = progress_query.iter().next()
         && let Some(progress) = loading_timer.as_ref().map(|timer| timer.0.fraction())
     {
-        render_progress_bar(&mut terminal, progress_bar, progress);
+        render_progress_bar(&mut frame, &grid, progress_bar, progress);
     }
 }
 
-fn render_scene_text(terminal: &mut Terminal, text: &SceneText) {
+fn render_scene_text(frame: &mut AsciiFrame, grid: &AsciiGrid, text: &SceneText) {
     let row = text.row.max(0) as usize;
     let column = if text.centered {
-        ((TERMINAL_WIDTH as i32 - text.value.len() as i32) / 2).max(0) as usize
+        ((grid.grid_size.x as i32 - text.value.len() as i32) / 2).max(0) as usize
     } else {
         text.column.max(0) as usize
     };
-    terminal.put_string([column, row], text.value.as_str());
+    frame.put_string(
+        IVec2::new(column as i32, row as i32),
+        text.value.as_str(),
+        Color::WHITE,
+        Color::NONE,
+    );
 }
 
-fn render_progress_bar(terminal: &mut Terminal, bar: &SceneProgressBar, progress: f32) {
+fn render_progress_bar(
+    frame: &mut AsciiFrame,
+    grid: &AsciiGrid,
+    bar: &SceneProgressBar,
+    progress: f32,
+) {
     let row = bar.row.max(0) as usize;
-    let start_x = ((TERMINAL_WIDTH as i32 - bar.width as i32) / 2).max(0) as usize;
+    let start_x = ((grid.grid_size.x as i32 - bar.width as i32) / 2).max(0) as usize;
     let filled = (progress.clamp(0.0, 1.0) * bar.width as f32) as usize;
 
     for x in 0..bar.width {
         let ch = if x < filled { '#' } else { '-' };
-        terminal.put_char([start_x + x, row], ch);
+        frame.put_char(
+            IVec2::new((start_x + x) as i32, row as i32),
+            ch,
+            Color::WHITE,
+            Color::NONE,
+        );
     }
 
     let percent = format!("{:.0}%", (progress * 100.0).clamp(0.0, 100.0));
-    let percent_column = ((TERMINAL_WIDTH as i32 - percent.len() as i32) / 2).max(0) as usize;
+    let percent_column =
+        ((grid.grid_size.x as i32 - percent.len() as i32) / 2).max(0) as usize;
     let label_row = bar.label_row.max(0) as usize;
-    terminal.put_string([percent_column, label_row], percent.as_str());
+    frame.put_string(
+        IVec2::new(percent_column as i32, label_row as i32),
+        percent.as_str(),
+        Color::WHITE,
+        Color::NONE,
+    );
 }
 
-fn render_fade_overlay(terminal: &mut Terminal, overlay: &SceneFadeOverlay, progress: f32) {
+fn render_fade_overlay(
+    frame: &mut AsciiFrame,
+    grid: &AsciiGrid,
+    overlay: &SceneFadeOverlay,
+    progress: f32,
+) {
     let fade_char = if progress < 0.3 {
         '#'
     } else if progress < 0.6 {
@@ -351,30 +370,50 @@ fn render_fade_overlay(terminal: &mut Terminal, overlay: &SceneFadeOverlay, prog
     };
 
     let coverage = 1.0 - progress;
-    let width = overlay.width.max(1) as f32;
-    let height = overlay.height.max(1) as f32;
+    let overlay_width = if overlay.width > 0 {
+        overlay.width
+    } else {
+        grid.grid_size.x as usize
+    };
+    let overlay_height = if overlay.height > 0 {
+        overlay.height
+    } else {
+        grid.grid_size.y as usize
+    };
+    let width = overlay_width.max(1) as f32;
+    let height = overlay_height.max(1) as f32;
 
     let center_x = width / 2.0;
     let center_y = height / 2.0;
     let max_distance = (center_x.powi(2) + center_y.powi(2)).sqrt();
 
-    for y in 0..overlay.height {
-        for x in 0..overlay.width {
+    for y in 0..overlay_height {
+        for x in 0..overlay_width {
             let dx = x as f32 - center_x;
             let dy = y as f32 - center_y;
             let distance = (dx * dx + dy * dy).sqrt();
             let normalized = distance / max_distance;
             if normalized < coverage {
-                terminal.put_char([x, y], fade_char);
+                frame.put_char(
+                    IVec2::new(x as i32, y as i32),
+                    fade_char,
+                    Color::WHITE,
+                    Color::NONE,
+                );
             }
         }
     }
 
     if progress < 0.8 {
         let text = "Starting...";
-        let column = ((TERMINAL_WIDTH as i32 - text.len() as i32) / 2).max(0) as usize;
-        let row = TERMINAL_HEIGHT / 2;
-        terminal.put_string([column, row], text);
+        let column = ((grid.grid_size.x as i32 - text.len() as i32) / 2).max(0) as usize;
+        let row = grid.grid_size.y as usize / 2;
+        frame.put_string(
+            IVec2::new(column as i32, row as i32),
+            text,
+            Color::WHITE,
+            Color::NONE,
+        );
     }
 }
 
@@ -421,8 +460,8 @@ fn build_fade_scene(type_registry: &AppTypeRegistry) -> DynamicScene {
         world.spawn((
             SceneMarker::new(SceneId::FadeIn),
             SceneFadeOverlay {
-                width: TERMINAL_WIDTH,
-                height: TERMINAL_HEIGHT,
+                width: 0,
+                height: 0,
             },
         ));
     })

@@ -320,6 +320,7 @@ fn setup_level_transition(
     boss_query: Query<Entity, With<Boss>>,
     mut player_query: Query<&mut Player>,
     mut camera_offset: ResMut<CameraOffset>,
+    mut cinematic_camera: ResMut<CinematicCamera>,
     level: Res<Level>,
 ) {
     // despawn
@@ -342,6 +343,8 @@ fn setup_level_transition(
         player.world_position = IVec2::new(40, 25);
     }
     camera_offset.0 = IVec2::default();
+    cinematic_camera.current_offset = Vec2::ZERO;
+    cinematic_camera.target_offset = Vec2::ZERO;
 
     // spawn campfire on rest level
     if level.as_ref() == &Level::Rest {

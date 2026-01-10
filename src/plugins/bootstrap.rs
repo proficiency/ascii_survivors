@@ -1,6 +1,5 @@
 use crate::resources::*;
 use bevy::{prelude::*, window::PresentMode};
-use bevy_ascii_terminal::*;
 
 pub struct BootstrapPlugin;
 
@@ -12,12 +11,11 @@ impl Plugin for BootstrapPlugin {
                     title: "ASCII Survivors".into(),
                     visible: true,
                     present_mode: PresentMode::Fifo,
-                    resolution: (640., 400.).into(),
+                    resolution: (1600., 900.).into(),
                     ..default()
                 }),
                 ..default()
             }),
-            TerminalPlugins,
         ))
         .init_state::<GameState>()
         .init_resource::<EnemySpawnTimer>()
@@ -35,15 +33,6 @@ impl Plugin for BootstrapPlugin {
         .init_resource::<SceneLock>()
         .init_resource::<Ruleset>()
         .init_resource::<Level>()
-        .init_resource::<KillCount>()
-        .add_systems(
-            Startup,
-            (spawn_terminal, crate::systems::setup_lighting_overlay).chain(),
-        );
+        .init_resource::<KillCount>();
     }
-}
-
-fn spawn_terminal(mut commands: Commands) {
-    commands.spawn(Terminal::new([80, 50]));
-    commands.spawn(TerminalCamera::new());
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 /// Shared GPU texture & buffer used to composite multi-colored lighting
-/// over the ASCII terminal output.
+/// over the ASCII frame output.
 #[derive(Resource)]
 pub struct LightingOverlay {
     pub handle: Handle<Image>,

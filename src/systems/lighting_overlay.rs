@@ -7,20 +7,15 @@ use bevy::{
     },
     sprite::Sprite,
 };
-use bevy_ascii_terminal::Terminal;
 
 const LIGHTING_PIXEL_SCALE: u32 = 4;
 
 pub fn setup_lighting_overlay(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
-    terminal_query: Query<&Terminal>,
+    grid: Res<AsciiGrid>,
 ) {
-    let terminal = terminal_query
-        .single()
-        .expect("terminal entity should exist before lighting overlay setup");
-    let size = terminal.size();
-    let logical_size = UVec2::new(size[0], size[1]);
+    let logical_size = grid.grid_size;
     let texture_size = logical_size * LIGHTING_PIXEL_SCALE;
     let pixel_count = (texture_size.x * texture_size.y) as usize;
 
@@ -40,6 +35,17 @@ pub fn setup_lighting_overlay(
     let handle = images.add(image);
     let ambient = LinearRgba::from(Color::srgba(0.01, 0.01, 0.02, 0.35));
 
+    let mut overlay_sprite = Sprite::from_image(handle.clone());
+    let world_size = grid.world_size();
+    overlay_sprite.custom_size = Some(world_size);
+
+    commands.spawn((
+            LightingOverlaySprite,
+            overlay_sprite,
+            Transform::from_xyz(world_size.x / 2.0, world_size.y / 2.0, 5.0),
+            Name::new("LightingOverlay"),
+        ));
+
     commands.insert_resource(LightingOverlay {
         handle: handle.clone(),
         size: logical_size,
@@ -48,21 +54,13 @@ pub fn setup_lighting_overlay(
         ambient_color: ambient,
         buffer: vec![ambient; pixel_count],
     });
-
-    let mut overlay_sprite = Sprite::from_image(handle.clone());
-    overlay_sprite.custom_size = Some(Vec2::new(size[0] as f32, size[1] as f32));
-
-    commands.spawn((
-        overlay_sprite,
-        Transform::from_xyz(size[0] as f32 / 2.0, size[1] as f32 / 2.0, 5.0),
-        Name::new("LightingOverlay"),
-    ));
 }
 
 #[allow(clippy::too_many_arguments)]
 pub fn update_lighting_overlay(
     mut overlay: ResMut<LightingOverlay>,
     mut images: ResMut<Assets<Image>>,
+    grid: Res<AsciiGrid>,
     camera_offset: Res<CameraOffset>,
     player_lights: Query<(&Player, &LightEmitter)>,
     campfire_lights: Query<(&Campfire, &LightEmitter)>,
@@ -70,7 +68,17 @@ pub fn update_lighting_overlay(
     shop_occluders: Query<&ShopNpc>,
     enemy_occluders: Query<&Enemy>,
     boss_occluders: Query<&Boss>,
+    mut sprite_query: Query<(&mut Sprite, &mut Transform), With<LightingOverlaySprite>>,
 ) {
+    if overlay.size != grid.grid_size {
+        resize_lighting_overlay(
+            &mut overlay,
+            &mut images,
+            &grid,
+            &mut sprite_query,
+        );
+    }
+
     let Some(image) = images.get_mut(&overlay.handle) else {
         return;
     };
@@ -172,6 +180,46 @@ fn screen_position(world: IVec2, camera_offset: IVec2, size: UVec2, pixel_scale:
     let x = adjusted.x as f32 + 0.5;
     let y = size.y as f32 - adjusted.y as f32 - 1.0 + 0.5;
     Vec2::new(x * pixel_scale as f32, y * pixel_scale as f32)
+}
+
+#[derive(Component)]
+pub struct LightingOverlaySprite;
+
+fn resize_lighting_overlay(
+    overlay: &mut LightingOverlay,
+    images: &mut Assets<Image>,
+    grid: &AsciiGrid,
+    sprite_query: &mut Query<(&mut Sprite, &mut Transform), With<LightingOverlaySprite>>,
+) {
+    let logical_size = grid.grid_size;
+    let texture_size = logical_size * overlay.pixel_scale;
+    let pixel_count = (texture_size.x * texture_size.y) as usize;
+
+    let mut image = Image::new_fill(
+        Extent3d {
+            width: texture_size.x,
+            height: texture_size.y,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        &[0, 0, 0, 0],
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
+    );
+    image.texture_descriptor.usage |= TextureUsages::COPY_DST;
+
+    let handle = images.add(image);
+    overlay.handle = handle.clone();
+    overlay.size = logical_size;
+    overlay.texture_size = texture_size;
+    overlay.buffer = vec![overlay.ambient_color; pixel_count];
+
+    if let Ok((mut sprite, mut transform)) = sprite_query.single_mut() {
+        let world_size = grid.world_size();
+        sprite.custom_size = Some(world_size);
+        sprite.image = handle;
+        transform.translation = Vec3::new(world_size.x / 2.0, world_size.y / 2.0, 5.0);
+    }
 }
 
 fn blend_color(base: LinearRgba, light: LinearRgba, weight: f32) -> LinearRgba {

@@ -1,6 +1,5 @@
 use crate::{effects::StatusEffect, maps::*, objects::*, resources::*};
 use bevy::prelude::*;
-use bevy_ascii_terminal::{string::TerminalString, *};
 
 fn world_to_screen(world_position: IVec2, terminal_size: UVec2) -> IVec2 {
     IVec2::new(
@@ -20,59 +19,54 @@ pub struct ResourceBarConfig<'a> {
     pub bar_y_position: usize,
 }
 
-pub fn draw_resource_bar(terminal_query: &mut Query<&mut Terminal>, config: ResourceBarConfig) {
-    if let Ok(mut terminal) = terminal_query.single_mut() {
-        let resource_ratio = if config.max_value > 0 {
-            config.current_value as f32 / config.max_value as f32
-        } else {
-            0.0
-        };
-        let filled_length = (resource_ratio * config.bar_length as f32) as usize;
+pub fn draw_resource_bar(frame: &mut AsciiFrame, config: ResourceBarConfig) {
+    let resource_ratio = if config.max_value > 0 {
+        config.current_value as f32 / config.max_value as f32
+    } else {
+        0.0
+    };
+    let filled_length = (resource_ratio * config.bar_length as f32) as usize;
 
-        let mut bar_content = String::new();
+    let formatted_resource_name = format!("{}:", config.resource_name);
+    let formatted_name_length = formatted_resource_name.len();
+    let formatted_bar_position = config.bar_x_position + formatted_name_length;
+    if config.bar_length + formatted_bar_position <= frame.size.x as usize {
+        frame.put_string(
+            IVec2::new(config.bar_x_position as i32, config.bar_y_position as i32),
+            formatted_resource_name.as_str(),
+            Color::WHITE,
+            Color::NONE,
+        );
         for i in 0..config.bar_length {
             if i < filled_length {
-                bar_content.push(config.filled_char);
+                frame.put_char(
+                    IVec2::new((formatted_bar_position + i) as i32, config.bar_y_position as i32),
+                    config.filled_char,
+                    config.bar_color,
+                    Color::NONE,
+                );
             }
-        }
-
-        let mut bar_ts = TerminalString::from(bar_content);
-        bar_ts.decoration.fg_color = Some(LinearRgba::from(config.bar_color));
-
-        let formatted_resource_name = format!("{}:", config.resource_name);
-        let formatted_name_length = formatted_resource_name.len();
-        let formatted_bar_position = config.bar_x_position + formatted_name_length;
-        if config.bar_length + formatted_bar_position <= terminal.size()[0] as usize {
-            terminal.put_string(
-                [config.bar_x_position, config.bar_y_position],
-                formatted_resource_name,
-            );
-            terminal.put_string([formatted_bar_position, config.bar_y_position], bar_ts);
         }
     }
 }
 
-pub fn draw_survival_timer(
-    terminal_query: &mut Query<&mut Terminal>,
-    seconds_survived: f32,
-    ruleset: &Ruleset,
-) {
-    if let Ok(mut terminal) = terminal_query.single_mut() {
-        let timer_text = if seconds_survived >= ruleset.portal_spawn_time {
-            "Portal Available".to_string()
-        } else {
-            format!("Time: {:.1}s", seconds_survived)
-        };
-        let text_length = timer_text.len() as i32;
-        let terminal_width = terminal.size()[0] as i32;
-        let x_position = (terminal_width - text_length) / 2;
-        let x_position = std::cmp::max(0, x_position) as usize;
+pub fn draw_survival_timer(frame: &mut AsciiFrame, seconds_survived: f32, ruleset: &Ruleset) {
+    let timer_text = if seconds_survived >= ruleset.portal_spawn_time {
+        "Portal Available".to_string()
+    } else {
+        format!("Time: {:.1}s", seconds_survived)
+    };
+    let text_length = timer_text.len() as i32;
+    let terminal_width = frame.size.x as i32;
+    let x_position = (terminal_width - text_length) / 2;
+    let x_position = std::cmp::max(0, x_position) as i32;
 
-        let mut timer_ts = TerminalString::from(timer_text);
-        timer_ts.decoration.fg_color =
-            Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
-        terminal.put_string([x_position, 0], timer_ts);
-    }
+    frame.put_string(
+        IVec2::new(x_position, 0),
+        timer_text.as_str(),
+        Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
+        Color::NONE,
+    );
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -87,7 +81,7 @@ pub fn render_system(
     campfire_query: Query<&Campfire>,
     ember_query: Query<&Ember>,
     shop_npc_query: Query<&ShopNpc>,
-    mut terminal_query: Query<&mut Terminal>,
+    mut frame: ResMut<AsciiFrame>,
     camera_offset: Res<CameraOffset>,
     survival_timer: Res<SurvivalTimer>,
     ruleset: Res<Ruleset>,
@@ -105,7 +99,7 @@ pub fn render_system(
         campfire_query,
         ember_query,
         shop_npc_query,
-        &mut terminal_query,
+        &mut frame,
         camera_offset,
         survival_timer.0.elapsed_secs(),
         &ruleset,
@@ -114,23 +108,22 @@ pub fn render_system(
     );
 }
 
-fn draw_map(terminal: &mut Terminal, map: &Map, camera_offset: IVec2, terminal_size: UVec2) {
+fn draw_map(frame: &mut AsciiFrame, map: &Map, camera_offset: IVec2, terminal_size: UVec2) {
     for x in 0..map.width {
         for y in 0..map.height {
             let world_position = IVec2::new(x as i32, y as i32) - camera_offset;
             let draw_position = world_to_screen(world_position, terminal_size);
 
-            if terminal
-                .size()
-                .contains_point([draw_position.x, draw_position.y])
+            if frame.contains(draw_position)
                 && let Some(tile) = map.get_tile(x as i32, y as i32)
                 && tile.explored
             {
-                let mut tile_char = TerminalString::from(tile.tile_type.to_char().to_string());
-                tile_char.decoration.fg_color = Some(LinearRgba::from(tile.tile_type.to_color()));
-                tile_char.decoration.bg_color =
-                    Some(LinearRgba::from(tile.tile_type.to_bg_color()));
-                terminal.put_string([draw_position.x, draw_position.y], tile_char);
+                frame.put_char(
+                    draw_position,
+                    tile.tile_type.to_char(),
+                    tile.tile_type.to_color(),
+                    tile.tile_type.to_bg_color(),
+                );
             }
         }
     }
@@ -148,236 +141,209 @@ pub fn draw_scene(
     campfire_query: Query<&Campfire>,
     ember_query: Query<&Ember>,
     shop_npc_query: Query<&ShopNpc>,
-    terminal_query: &mut Query<&mut Terminal>,
+    frame: &mut AsciiFrame,
     camera_offset: Res<CameraOffset>,
     seconds_survived: f32,
     ruleset: &Ruleset,
     level: Res<Level>,
     map: Option<Res<Map>>,
 ) {
-    if let Ok(mut terminal) = terminal_query.single_mut() {
-        terminal.clear();
+    frame.clear();
+    let terminal_size = frame.size;
 
-        let terminal_size = terminal.size();
+    if let Some(map) = map {
+        draw_map(frame, &map, camera_offset.0, terminal_size);
+    }
 
-        if let Some(map) = map {
-            draw_map(&mut terminal, &map, camera_offset.0, terminal_size);
-        }
+    // draw orbs
+    for orb in orb_query.iter() {
+        let world_position = orb.position - camera_offset.0;
+        let draw_position = world_to_screen(world_position, terminal_size);
 
-        // draw orbs
-        for orb in orb_query.iter() {
-            let world_position = orb.position - camera_offset.0;
-            let draw_position = world_to_screen(world_position, terminal_size);
-
-            if terminal
-                .size()
-                .contains_point([draw_position.x, draw_position.y])
-            {
-                let mut orb_char = TerminalString::from("o");
-                orb_char.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgba(0.8, 0.2, 0.8, 1.0)));
-                terminal.put_string([draw_position.x, draw_position.y], orb_char);
-            }
-        }
-
-        // draw enemies
-        for enemy in enemy_query.iter() {
-            let world_position = enemy.position - camera_offset.0;
-            let draw_position = world_to_screen(world_position, terminal_size);
-
-            if terminal
-                .size()
-                .contains_point([draw_position.x, draw_position.y])
-            {
-                let mut enemy_char = TerminalString::from("d");
-                enemy_char.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
-                terminal.put_string([draw_position.x, draw_position.y], enemy_char);
-            }
-        }
-
-        // draw bosses
-        for boss in boss_query.iter() {
-            for segment in &boss.segments {
-                let world_position = segment.position - camera_offset.0;
-                let draw_position = world_to_screen(world_position, terminal_size);
-
-                if terminal
-                    .size()
-                    .contains_point([draw_position.x, draw_position.y])
-                {
-                    let mut boss_char = TerminalString::from(segment.character.to_string());
-                    boss_char.decoration.fg_color = Some(LinearRgba::from(segment.color));
-                    terminal.put_string([draw_position.x, draw_position.y], boss_char);
-                }
-            }
-        }
-
-        // draw normal projectiles
-        for projectile in projectile_query.iter() {
-            let world_position = projectile.position - camera_offset.0;
-            let draw_position = world_to_screen(world_position, terminal_size);
-
-            // ensure projectile is within our viewport before drawing it
-            if terminal
-                .size()
-                .contains_point([draw_position.x, draw_position.y])
-            {
-                let mut projectile_char = TerminalString::from("*");
-                projectile_char.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgba(1.0, 0.7, 0.0, 1.0)));
-                terminal.put_string([draw_position.x, draw_position.y], projectile_char);
-            }
-        }
-
-        // draw fireballs
-        for fireball in fireball_query.iter() {
-            let world_position = fireball.position - camera_offset.0;
-            let draw_position = world_to_screen(world_position, terminal_size);
-
-            // ensure fireball is within our viewport before drawing it
-            if terminal
-                .size()
-                .contains_point([draw_position.x, draw_position.y])
-            {
-                let mut fireball_char = TerminalString::from("@");
-                fireball_char.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgb(1.0, 0.3, 0.0)));
-                terminal.put_string([draw_position.x, draw_position.y], fireball_char);
-            }
-        }
-
-        // draw player
-        if let Ok((player, status_effect)) = player_query.single() {
-            // note: the player is assumed to always be in the center of our viewpoint
-            let mut player_position = TerminalString::from("@");
-
-            if let Some(effect) = status_effect {
-                player_position.decoration.fg_color = Some(LinearRgba::from(effect.color));
-            } else {
-                player_position.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)));
-            }
-
-            terminal.put_string([player.position.x, player.position.y], player_position);
-        }
-
-        // draw portals
-        for portal in portal_query.iter() {
-            let world_position = portal.position - camera_offset.0;
-            let draw_position = world_to_screen(world_position, terminal_size);
-
-            if terminal
-                .size()
-                .contains_point([draw_position.x, draw_position.y])
-            {
-                let mut portal_char = TerminalString::from("P");
-                portal_char.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgba(0.0, 1.0, 1.0, 1.0)));
-                terminal.put_string([draw_position.x, draw_position.y], portal_char);
-            }
-        }
-
-        // draw campfire
-        for campfire in campfire_query.iter() {
-            let world_position = campfire.position - camera_offset.0;
-            let draw_position = world_to_screen(world_position, terminal_size);
-            let wood_position = IVec2::new(draw_position.x, draw_position.y + 1);
-            if terminal
-                .size()
-                .contains_point([wood_position.x, wood_position.y])
-            {
-                let mut wood_char = TerminalString::from("=");
-                wood_char.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgb(0.5, 0.25, 0.0))); // brown
-                terminal.put_string([wood_position.x, wood_position.y], wood_char);
-            }
-            if terminal
-                .size()
-                .contains_point([draw_position.x, draw_position.y])
-            {
-                let (character, color) = campfire.get_current_visual();
-                let mut campfire_char = TerminalString::from(character.to_string());
-                campfire_char.decoration.fg_color = Some(LinearRgba::from(color));
-                terminal.put_string([draw_position.x, draw_position.y], campfire_char);
-            }
-        }
-
-        for ember in ember_query.iter() {
-            let world_position = ember.position - camera_offset.0;
-            let draw_position = world_to_screen(world_position, terminal_size);
-
-            if terminal
-                .size()
-                .contains_point([draw_position.x, draw_position.y])
-            {
-                let mut ember_char = TerminalString::from(".");
-                ember_char.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgb(1.0, 0.5, 0.0)));
-                terminal.put_string([draw_position.x, draw_position.y], ember_char);
-            }
-        }
-
-        // draw shop npcs
-        for shop_npc in shop_npc_query.iter() {
-            let world_position = shop_npc.position - camera_offset.0;
-            let draw_position = world_to_screen(world_position, terminal_size);
-            if terminal
-                .size()
-                .contains_point([draw_position.x, draw_position.y])
-            {
-                let mut npc_char = TerminalString::from("S");
-                npc_char.decoration.fg_color =
-                    Some(LinearRgba::from(Color::linear_rgb(0.0, 1.0, 1.0)));
-                terminal.put_string([draw_position.x, draw_position.y], npc_char);
-            }
-        }
-
-        // draw player info(hp bar, xp, etc)
-        if let Ok((player, _)) = player_query.single() {
-            draw_resource_bar(
-                terminal_query,
-                ResourceBarConfig {
-                    resource_name: "Health",
-                    filled_char: '#',
-                    bar_length: 20,
-                    current_value: player.health as usize,
-                    max_value: player.max_health as usize,
-                    bar_color: Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
-                    bar_x_position: 0,
-                    bar_y_position: 47,
-                },
-            );
-            draw_resource_bar(
-                terminal_query,
-                ResourceBarConfig {
-                    resource_name: "Mana",
-                    filled_char: '#',
-                    bar_length: 20,
-                    current_value: player.arcanum.mana as usize,
-                    max_value: player.arcanum.max_mana as usize,
-                    bar_color: Color::linear_rgba(0.15, 0.45, 1.0, 1.0),
-                    bar_x_position: 0,
-                    bar_y_position: 48,
-                },
-            );
-            draw_resource_bar(
-                terminal_query,
-                ResourceBarConfig {
-                    resource_name: &format!("XP (Lvl {})", player.level),
-                    filled_char: '#',
-                    bar_length: 20,
-                    current_value: player.experience as usize,
-                    max_value: player.experience_to_next_level as usize,
-                    bar_color: Color::linear_rgba(0.1, 0.25, 1.0, 1.0),
-                    bar_x_position: 0,
-                    bar_y_position: 49,
-                },
+        if frame.contains(draw_position) {
+            frame.put_char(
+                draw_position,
+                'o',
+                Color::linear_rgba(0.8, 0.2, 0.8, 1.0),
+                Color::NONE,
             );
         }
+    }
 
-        if matches!(level.as_ref(), Level::Survival) {
-            draw_survival_timer(terminal_query, seconds_survived, ruleset);
+    // draw enemies
+    for enemy in enemy_query.iter() {
+        let world_position = enemy.position - camera_offset.0;
+        let draw_position = world_to_screen(world_position, terminal_size);
+
+        if frame.contains(draw_position) {
+            frame.put_char(
+                draw_position,
+                'd',
+                Color::linear_rgba(1.0, 1.0, 1.0, 1.0),
+                Color::NONE,
+            );
         }
+    }
+
+    // draw bosses
+    for boss in boss_query.iter() {
+        for segment in &boss.segments {
+            let world_position = segment.position - camera_offset.0;
+            let draw_position = world_to_screen(world_position, terminal_size);
+
+            if frame.contains(draw_position) {
+                frame.put_char(draw_position, segment.character, segment.color, Color::NONE);
+            }
+        }
+    }
+
+    // draw normal projectiles
+    for projectile in projectile_query.iter() {
+        let world_position = projectile.position - camera_offset.0;
+        let draw_position = world_to_screen(world_position, terminal_size);
+
+        if frame.contains(draw_position) {
+            frame.put_char(
+                draw_position,
+                '*',
+                Color::linear_rgba(1.0, 0.7, 0.0, 1.0),
+                Color::NONE,
+            );
+        }
+    }
+
+    // draw fireballs
+    for fireball in fireball_query.iter() {
+        let world_position = fireball.position - camera_offset.0;
+        let draw_position = world_to_screen(world_position, terminal_size);
+
+        if frame.contains(draw_position) {
+            frame.put_char(
+                draw_position,
+                '@',
+                Color::linear_rgb(1.0, 0.3, 0.0),
+                Color::NONE,
+            );
+        }
+    }
+
+    // draw player
+    if let Ok((player, status_effect)) = player_query.single() {
+        // note: the player is assumed to always be in the center of our viewpoint
+        let color = status_effect
+            .map(|effect| effect.color)
+            .unwrap_or_else(|| Color::linear_rgba(1.0, 1.0, 1.0, 1.0));
+        frame.put_char(player.position, '@', color, Color::NONE);
+    }
+
+    // draw portals
+    for portal in portal_query.iter() {
+        let world_position = portal.position - camera_offset.0;
+        let draw_position = world_to_screen(world_position, terminal_size);
+
+        if frame.contains(draw_position) {
+            frame.put_char(
+                draw_position,
+                'P',
+                Color::linear_rgba(0.0, 1.0, 1.0, 1.0),
+                Color::NONE,
+            );
+        }
+    }
+
+    // draw campfire
+    for campfire in campfire_query.iter() {
+        let world_position = campfire.position - camera_offset.0;
+        let draw_position = world_to_screen(world_position, terminal_size);
+        let wood_position = IVec2::new(draw_position.x, draw_position.y + 1);
+        if frame.contains(wood_position) {
+            frame.put_char(
+                wood_position,
+                '=',
+                Color::linear_rgb(0.5, 0.25, 0.0),
+                Color::NONE,
+            );
+        }
+        if frame.contains(draw_position) {
+            let (character, color) = campfire.get_current_visual();
+            frame.put_char(draw_position, character, color, Color::NONE);
+        }
+    }
+
+    for ember in ember_query.iter() {
+        let world_position = ember.position - camera_offset.0;
+        let draw_position = world_to_screen(world_position, terminal_size);
+
+        if frame.contains(draw_position) {
+            frame.put_char(
+                draw_position,
+                '.',
+                Color::linear_rgb(1.0, 0.5, 0.0),
+                Color::NONE,
+            );
+        }
+    }
+
+    // draw shop npcs
+    for shop_npc in shop_npc_query.iter() {
+        let world_position = shop_npc.position - camera_offset.0;
+        let draw_position = world_to_screen(world_position, terminal_size);
+        if frame.contains(draw_position) {
+            frame.put_char(
+                draw_position,
+                'S',
+                Color::linear_rgb(0.0, 1.0, 1.0),
+                Color::NONE,
+            );
+        }
+    }
+
+    // draw player info(hp bar, xp, etc)
+    if let Ok((player, _)) = player_query.single() {
+        let height = frame.size.y as i32;
+        let base_y = (height - 3).max(0) as usize;
+        draw_resource_bar(
+            frame,
+            ResourceBarConfig {
+                resource_name: "Health",
+                filled_char: '#',
+                bar_length: 20,
+                current_value: player.health as usize,
+                max_value: player.max_health as usize,
+                bar_color: Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
+                bar_x_position: 0,
+                bar_y_position: base_y,
+            },
+        );
+        draw_resource_bar(
+            frame,
+            ResourceBarConfig {
+                resource_name: "Mana",
+                filled_char: '#',
+                bar_length: 20,
+                current_value: player.arcanum.mana as usize,
+                max_value: player.arcanum.max_mana as usize,
+                bar_color: Color::linear_rgba(0.15, 0.45, 1.0, 1.0),
+                bar_x_position: 0,
+                bar_y_position: base_y + 1,
+            },
+        );
+        draw_resource_bar(
+            frame,
+            ResourceBarConfig {
+                resource_name: &format!("XP (Lvl {})", player.level),
+                filled_char: '#',
+                bar_length: 20,
+                current_value: player.experience as usize,
+                max_value: player.experience_to_next_level as usize,
+                bar_color: Color::linear_rgba(0.1, 0.25, 1.0, 1.0),
+                bar_x_position: 0,
+                bar_y_position: base_y + 2,
+            },
+        );
+    }
+
+    if matches!(level.as_ref(), Level::Survival) {
+        draw_survival_timer(frame, seconds_survived, ruleset);
     }
 }

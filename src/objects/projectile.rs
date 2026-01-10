@@ -5,12 +5,12 @@ use crate::objects::orb::Orb;
 use crate::objects::player::Player;
 use crate::plugins::audio::*;
 use crate::resources::CameraOffset;
+use crate::resources::AsciiGrid;
 use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
 use crate::resources::timers::ProjectileCooldownTimer;
 use crate::systems::cleanup::Despawn;
 use bevy::prelude::*;
-use bevy_ascii_terminal::*;
 
 #[derive(Component)]
 pub struct Projectile {
@@ -102,75 +102,73 @@ pub fn process_projectiles(
     mut projectile_query: Query<(Entity, &mut Projectile), Without<Fireball>>,
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
-    terminal_query: Query<&Terminal>,
+    grid: Res<AsciiGrid>,
     camera_offset: Res<CameraOffset>,
     time: Res<Time>,
     _scene_lock: Res<SceneLock>,
 ) {
-    if let Ok(terminal) = terminal_query.single() {
-        let terminal_size = terminal.size();
+    let terminal_size = grid.grid_size;
 
-        for (entity, mut projectile) in projectile_query.iter_mut() {
-            projectile.lifetime -= time.delta_secs();
-            if projectile.lifetime <= 0.0 {
-                commands.entity(entity).insert(Despawn);
-                continue;
+    for (entity, mut projectile) in projectile_query.iter_mut() {
+        projectile.lifetime -= time.delta_secs();
+        if projectile.lifetime <= 0.0 {
+            commands.entity(entity).insert(Despawn);
+            continue;
+        }
+
+        let speed = projectile.speed * time.delta_secs();
+        let mut target_exists = false;
+
+        if let Some(target_entity) = projectile.target {
+            if let Ok(target_enemy) = enemy_query.get(target_entity) {
+                projectile.target_last_position = Some(target_enemy.position);
+
+                let direction = (target_enemy.position - projectile.position)
+                    .as_vec2()
+                    .normalize_or_zero();
+
+                target_exists = true;
+                projectile.position += (direction * speed).as_ivec2();
+            }
+            // we can't find an enemy, but are there any bosses?
+            else if let Ok(target_boss) = boss_query.get(target_entity) {
+                projectile.target_last_position = Some(target_boss.get_head_position());
+
+                let direction = (target_boss.get_head_position() - projectile.position)
+                    .as_vec2()
+                    .normalize_or_zero();
+
+                target_exists = true;
+                projectile.position += (direction * speed).as_ivec2();
             }
 
-            let speed = projectile.speed * time.delta_secs();
-            let mut target_exists = false;
+            if projectile.target_last_position.is_some() {
+                let last_position = projectile.target_last_position.unwrap();
+                let direction = (last_position - projectile.position)
+                    .as_vec2()
+                    .normalize_or_zero();
 
-            if let Some(target_entity) = projectile.target {
-                if let Ok(target_enemy) = enemy_query.get(target_entity) {
-                    projectile.target_last_position = Some(target_enemy.position);
+                projectile.position += (direction * speed)
+                    .as_ivec2()
+                    .clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
 
-                    let direction = (target_enemy.position - projectile.position)
-                        .as_vec2()
-                        .normalize_or_zero();
-
-                    target_exists = true;
-                    projectile.position += (direction * speed).as_ivec2();
-                }
-                // we can't find an enemy, but are there any bosses?
-                else if let Ok(target_boss) = boss_query.get(target_entity) {
-                    projectile.target_last_position = Some(target_boss.get_head_position());
-
-                    let direction = (target_boss.get_head_position() - projectile.position)
-                        .as_vec2()
-                        .normalize_or_zero();
-
-                    target_exists = true;
-                    projectile.position += (direction * speed).as_ivec2();
-                }
-
-                if projectile.target_last_position.is_some() {
-                    let last_position = projectile.target_last_position.unwrap();
-                    let direction = (last_position - projectile.position)
-                        .as_vec2()
-                        .normalize_or_zero();
-
-                    projectile.position += (direction * speed)
-                        .as_ivec2()
-                        .clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
-
-                    target_exists = projectile.position != last_position;
-                }
+                target_exists = projectile.position != last_position;
             }
+        }
 
-            if !target_exists {
-                commands.entity(entity).insert(Despawn);
-                continue;
-            }
+        if !target_exists {
+            commands.entity(entity).insert(Despawn);
+            continue;
+        }
 
-            let draw_position = projectile.position - camera_offset.0;
-            if draw_position.x < 0
-                || draw_position.x >= terminal_size[0] as i32
-                || draw_position.y < 0
-                || draw_position.y >= terminal_size[1] as i32
-            {
-                // despawn
-                commands.entity(entity).insert(Despawn);
-            }
+        let draw_position = projectile.position - camera_offset.0;
+        if draw_position.x < 0
+            || draw_position.x >= terminal_size.x as i32
+            || draw_position.y < 0
+            || draw_position.y >= terminal_size.y as i32
+        {
+            // despawn
+            commands.entity(entity).insert(Despawn);
         }
     }
 }
@@ -181,69 +179,67 @@ pub fn process_fireballs(
     mut fireball_query: Query<(Entity, &mut Projectile, &Fireball)>,
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
-    terminal_query: Query<&Terminal>,
+    grid: Res<AsciiGrid>,
     camera_offset: Res<CameraOffset>,
     time: Res<Time>,
     _scene_lock: Res<SceneLock>,
 ) {
-    if let Ok(terminal) = terminal_query.single() {
-        let terminal_size = terminal.size();
+    let terminal_size = grid.grid_size;
 
-        for (entity, mut fireball, _fireball_marker) in fireball_query.iter_mut() {
-            fireball.lifetime -= time.delta_secs();
+    for (entity, mut fireball, _fireball_marker) in fireball_query.iter_mut() {
+        fireball.lifetime -= time.delta_secs();
 
-            if fireball.lifetime <= 0.0 {
+        if fireball.lifetime <= 0.0 {
+            commands.entity(entity).insert(Despawn);
+            continue;
+        }
+
+        let speed = fireball.speed * time.delta_secs();
+        let mut target_exists = false;
+        let mut target_position = None;
+
+        if let Some(target_entity) = fireball.target {
+            if let Ok(target_enemy) = enemy_query.get(target_entity) {
+                target_position = Some(target_enemy.position);
+                target_exists = true;
+            } else if let Ok(target_boss) = boss_query.get(target_entity) {
+                target_position = Some(target_boss.get_head_position());
+                target_exists = true;
+            } else if let Some(last_position) = fireball.target_last_position {
+                target_position = Some(last_position);
+            }
+        }
+
+        if let Some(target_pos) = target_position {
+            fireball.target_last_position = Some(target_pos);
+
+            let direction = (target_pos - fireball.position).as_vec2();
+            let distance = direction.length();
+
+            if distance <= speed {
+                fireball.position = target_pos;
                 commands.entity(entity).insert(Despawn);
                 continue;
+            } else {
+                let move_vector = direction.normalize_or_zero() * speed;
+                fireball.position += move_vector.as_ivec2();
+                target_exists = true;
             }
+        }
 
-            let speed = fireball.speed * time.delta_secs();
-            let mut target_exists = false;
-            let mut target_position = None;
+        if !target_exists {
+            commands.entity(entity).insert(Despawn);
+            continue;
+        }
 
-            if let Some(target_entity) = fireball.target {
-                if let Ok(target_enemy) = enemy_query.get(target_entity) {
-                    target_position = Some(target_enemy.position);
-                    target_exists = true;
-                } else if let Ok(target_boss) = boss_query.get(target_entity) {
-                    target_position = Some(target_boss.get_head_position());
-                    target_exists = true;
-                } else if let Some(last_position) = fireball.target_last_position {
-                    target_position = Some(last_position);
-                }
-            }
-
-            if let Some(target_pos) = target_position {
-                fireball.target_last_position = Some(target_pos);
-
-                let direction = (target_pos - fireball.position).as_vec2();
-                let distance = direction.length();
-
-                if distance <= speed {
-                    fireball.position = target_pos;
-                    commands.entity(entity).insert(Despawn);
-                    continue;
-                } else {
-                    let move_vector = direction.normalize_or_zero() * speed;
-                    fireball.position += move_vector.as_ivec2();
-                    target_exists = true;
-                }
-            }
-
-            if !target_exists {
-                commands.entity(entity).insert(Despawn);
-                continue;
-            }
-
-            let draw_position = fireball.position - camera_offset.0;
-            if draw_position.x < -10
-                || draw_position.x > terminal_size[0] as i32 + 10
-                || draw_position.y < -10
-                || draw_position.y > terminal_size[1] as i32 + 10
-            {
-                // despawn
-                commands.entity(entity).insert(Despawn);
-            }
+        let draw_position = fireball.position - camera_offset.0;
+        if draw_position.x < -10
+            || draw_position.x > terminal_size.x as i32 + 10
+            || draw_position.y < -10
+            || draw_position.y > terminal_size.y as i32 + 10
+        {
+            // despawn
+            commands.entity(entity).insert(Despawn);
         }
     }
 }

@@ -1,4 +1,5 @@
 pub mod camera;
+pub mod ascii;
 pub mod game_state;
 pub mod kill_count;
 pub mod level;
@@ -8,6 +9,7 @@ pub mod scene_lock;
 pub mod timers;
 
 pub use camera::*;
+pub use ascii::*;
 pub use game_state::*;
 pub use kill_count::*;
 pub use level::*;
