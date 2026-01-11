@@ -1,5 +1,6 @@
 use crate::{effects::*, objects::*, resources::*};
 use bevy::prelude::*;
+use std::collections::HashSet;
 
 pub fn enemy_ai(
     mut commands: Commands,
@@ -22,6 +23,7 @@ pub fn enemy_ai(
 
     let player_world_pos = player.world_position;
     let enemy_positions: Vec<IVec2> = enemy_query.iter().map(|enemy| enemy.position).collect();
+    let enemy_position_set: HashSet<IVec2> = enemy_positions.iter().copied().collect();
     let mut player_damage_taken = 0.0;
 
     for mut enemy in enemy_query.iter_mut() {
@@ -36,11 +38,15 @@ pub fn enemy_ai(
         const SEPARATION_RADIUS: f32 = 2.0;
         const SEPARATION_STRENGTH: f32 = 1.0;
 
-        for &other_pos in &enemy_positions {
-            if other_pos != enemy.position {
+        let search_radius = SEPARATION_RADIUS.ceil() as i32;
+        for dx in -search_radius..=search_radius {
+            for dy in -search_radius..=search_radius {
+                let other_pos = enemy.position + IVec2::new(dx, dy);
+                if other_pos == enemy.position || !enemy_position_set.contains(&other_pos) {
+                    continue;
+                }
                 let distance_vec = (enemy.position - other_pos).as_vec2();
                 let distance = distance_vec.length();
-
                 if distance < SEPARATION_RADIUS && distance > 0.0 {
                     let repulsion_strength =
                         SEPARATION_STRENGTH * (SEPARATION_RADIUS - distance) / SEPARATION_RADIUS;
@@ -74,11 +80,8 @@ pub fn enemy_ai(
 
                 // check if the desired position is occupied by another enemy
                 let mut is_occupied = false;
-                for &pos in &enemy_positions {
-                    if pos == wish_move {
-                        is_occupied = true;
-                        break;
-                    }
+                if enemy_position_set.contains(&wish_move) {
+                    is_occupied = true;
                 }
 
                 // check if the desired position is occupied by the player

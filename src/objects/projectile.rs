@@ -11,6 +11,7 @@ use crate::resources::scene_lock::SceneLock;
 use crate::resources::timers::ProjectileCooldownTimer;
 use crate::systems::cleanup::Despawn;
 use bevy::prelude::*;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Component)]
 pub struct Projectile {
@@ -253,41 +254,59 @@ pub fn process_collisions(
     _scene_lock: Res<SceneLock>,
 ) {
     // todo: currently only checking projectiles against enemies
+    let mut projectiles_by_pos: HashMap<IVec2, Vec<(Entity, f32)>> = HashMap::new();
     for (projectile_entity, projectile) in projectile_query.iter() {
-        for (enemy_entity, mut enemy) in enemy_query.iter_mut() {
-            if projectile.position == enemy.position {
-                if enemy.health > 0.0 {
-                    // take damage
-                    enemy.health -= projectile.damage;
+        projectiles_by_pos
+            .entry(projectile.position)
+            .or_default()
+            .push((projectile_entity, projectile.damage));
+    }
 
-                    // if enemy's health pool is depleted, mark it for despawn
-                    if enemy.health <= 0.0 {
-                        // spawn an orb at the enemy's position before despawning
-                        commands.spawn(Orb::new(enemy.position, 10));
-                        commands.entity(enemy_entity).insert(Despawn);
-                        kill_count.enemies += 1;
-                    }
-                }
+    for (enemy_entity, mut enemy) in enemy_query.iter_mut() {
+        let Some(projectiles) = projectiles_by_pos.get(&enemy.position) else {
+            continue;
+        };
 
-                // mark projectile for despawn
-                commands.entity(projectile_entity).insert(Despawn);
-            }
+        if enemy.health <= 0.0 {
+            continue;
         }
 
-        for (boss_entity, mut boss) in boss_query.iter_mut() {
-            for (segment_index, segment) in boss.segments.iter().enumerate() {
-                if projectile.position == segment.position {
-                    let is_defeated = boss.take_damage(projectile.damage, segment_index);
-                    if is_defeated {
-                        for segment in &boss.segments {
-                            commands.spawn(Orb::new(segment.position, 50)); // bosses are worth more experience than normal enemies
-                        }
-                        commands.entity(boss_entity).insert(Despawn);
-                        kill_count.enemies += 1;
-                    }
+        for (projectile_entity, damage) in projectiles {
+            enemy.health -= *damage;
+            commands.entity(*projectile_entity).insert(Despawn);
+            if enemy.health <= 0.0 {
+                commands.spawn(Orb::new(enemy.position, 10));
+                commands.entity(enemy_entity).insert(Despawn);
+                kill_count.enemies += 1;
+                break;
+            }
+        }
+    }
 
-                    commands.entity(projectile_entity).insert(Despawn);
-                    break; // ensure a projectile can only damage one segment at a time
+    let mut boss_used_projectiles: HashSet<Entity> = HashSet::new();
+    for (boss_entity, mut boss) in boss_query.iter_mut() {
+        let segment_count = boss.segments.len();
+        for segment_index in 0..segment_count {
+            let segment_position = boss.segments[segment_index].position;
+            let Some(projectiles) = projectiles_by_pos.get(&segment_position) else {
+                continue;
+            };
+
+            for (projectile_entity, damage) in projectiles {
+                if boss_used_projectiles.contains(projectile_entity) {
+                    continue;
+                }
+
+                let is_defeated = boss.take_damage(*damage, segment_index);
+                boss_used_projectiles.insert(*projectile_entity);
+                commands.entity(*projectile_entity).insert(Despawn);
+
+                if is_defeated {
+                    for segment in &boss.segments {
+                        commands.spawn(Orb::new(segment.position, 50));
+                    }
+                    commands.entity(boss_entity).insert(Despawn);
+                    kill_count.enemies += 1;
                 }
             }
         }
