@@ -2,7 +2,7 @@ use crate::{
     maps::tile::{Tile, TileType},
     resources::Level,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bevy::prelude::*;
 use rexpaint::*;
 use std::io::Cursor;

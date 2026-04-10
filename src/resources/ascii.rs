@@ -66,10 +66,7 @@ impl AsciiFrame {
     }
 
     pub fn contains(&self, pos: IVec2) -> bool {
-        pos.x >= 0
-            && pos.y >= 0
-            && pos.x < self.size.x as i32
-            && pos.y < self.size.y as i32
+        pos.x >= 0 && pos.y >= 0 && pos.x < self.size.x as i32 && pos.y < self.size.y as i32
     }
 
     pub fn cell_at(&self, x: u32, y: u32) -> Option<AsciiCell> {

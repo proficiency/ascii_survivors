@@ -1,15 +1,12 @@
 use crate::events::*;
-use crate::objects::boss::Boss;
-use crate::objects::enemy::Enemy;
-use crate::objects::orb::Orb;
-use crate::objects::player::Player;
+use crate::objects::{Boss, Enemy, GridPosition, Orb, PlayerTag};
 use crate::plugins::audio::*;
-use crate::resources::CameraOffset;
+use crate::plugins::world::cleanup::Despawn;
 use crate::resources::AsciiGrid;
+use crate::resources::CameraOffset;
 use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
 use crate::resources::timers::ProjectileCooldownTimer;
-use crate::systems::cleanup::Despawn;
 use bevy::prelude::*;
 use std::collections::{HashMap, HashSet};
 
@@ -29,7 +26,7 @@ pub struct Fireball;
 #[allow(clippy::too_many_arguments)]
 pub fn auto_cast(
     mut commands: Commands,
-    player_query: Query<&Player>,
+    player_query: Query<&GridPosition, With<PlayerTag>>,
     enemy_query: Query<(Entity, &Enemy)>,
     boss_query: Query<(Entity, &Boss)>,
     time: Res<Time>,
@@ -41,14 +38,14 @@ pub fn auto_cast(
 
     // is it time to fire a new projectile?
     if timer.0.finished()
-        && let Ok(player) = player_query.single()
+        && let Ok(player_pos) = player_query.single()
     {
         let mut nearest_target_entity: Option<Entity> = None;
         let mut min_distance = i32::MAX;
 
         for (enemy_entity, enemy) in enemy_query.iter() {
             let enemy_world_pos = enemy.position;
-            let player_world_pos = player.world_position;
+            let player_world_pos = player_pos.world;
 
             let distance = (enemy_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
@@ -59,7 +56,7 @@ pub fn auto_cast(
 
         for (boss_entity, boss) in boss_query.iter() {
             let boss_world_pos = boss.get_head_position();
-            let player_world_pos = player.world_position;
+            let player_world_pos = player_pos.world;
 
             let distance = (boss_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
@@ -70,7 +67,7 @@ pub fn auto_cast(
 
         // if we're targeting the nearest enemy, attack it
         if let Some(target_entity) = nearest_target_entity {
-            let player_position = player.world_position;
+            let player_position = player_pos.world;
 
             for _ in 0..3 {
                 commands.spawn((Projectile {

@@ -1,0 +1,138 @@
+use crate::{events::*, objects::*, plugins::audio::*, resources::*};
+use bevy::prelude::*;
+
+#[allow(clippy::too_many_arguments)]
+pub fn portal_transition_system(
+    time: Res<Time>,
+    mut portal_transition: ResMut<PortalTransition>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut level: ResMut<Level>,
+    player_query: Query<&GridPosition, With<PlayerTag>>,
+    portal_query: Query<&Portal>,
+    mut audio_events: EventWriter<AudioEvent>,
+    mut level_changed_events: EventWriter<LevelChangedEvent>,
+) {
+    if let Ok(player_pos) = player_query.single() {
+        let mut player_near_portal = false;
+        for portal in portal_query.iter() {
+            let diff = player_pos.world - portal.position;
+            let distance_squared = diff.x * diff.x + diff.y * diff.y;
+            if distance_squared <= 1 {
+                player_near_portal = true;
+                break;
+            }
+        }
+
+        match portal_transition.state {
+            PortalTransitionState::Inactive => {
+                if player_near_portal {
+                    portal_transition.state = PortalTransitionState::BuildingUp;
+                    portal_transition.timer.reset();
+                    portal_transition.progress = 0.0;
+                }
+            }
+            PortalTransitionState::BuildingUp => {
+                if player_near_portal {
+                    portal_transition.timer.tick(time.delta());
+                    portal_transition.progress = portal_transition.timer.fraction();
+
+                    if portal_transition.timer.finished() {
+                        let transitioning_to_rest = matches!(level.as_ref(), Level::Survival);
+
+                        let previous_level = *level;
+                        *level = match level.as_ref() {
+                            Level::Survival => Level::Rest,
+                            Level::Rest => Level::Survival,
+                            Level::Grassland => Level::Dungeon,
+                            Level::Dungeon => Level::Survival,
+                        };
+
+                        // (dont) stop the music
+                        if transitioning_to_rest {
+                            audio_events.write(AudioEvent {
+                                channel: AudioChannelType::Music,
+                                command: AudioCommand::Stop,
+                            });
+                        }
+
+                        if *level != previous_level {
+                            level_changed_events.write(LevelChangedEvent { new_level: *level });
+                        }
+
+                        next_state.set(GameState::LevelTransition);
+                        portal_transition.state = PortalTransitionState::Inactive;
+                        portal_transition.progress = 0.0;
+                        portal_transition.timer.reset();
+                    }
+                } else {
+                    portal_transition.state = PortalTransitionState::BreakingDown;
+                    let breakdown_time = portal_transition.progress * 2.0;
+                    portal_transition.timer = Timer::from_seconds(breakdown_time, TimerMode::Once);
+                    portal_transition.timer.reset();
+                }
+            }
+            PortalTransitionState::BreakingDown => {
+                if player_near_portal {
+                    portal_transition.state = PortalTransitionState::BuildingUp;
+                    let remaining_time = portal_transition.progress * 2.0;
+                    portal_transition.timer = Timer::from_seconds(2.0, TimerMode::Once);
+                    portal_transition
+                        .timer
+                        .set_elapsed(std::time::Duration::from_secs_f32(2.0 - remaining_time));
+                } else {
+                    portal_transition.timer.tick(time.delta());
+                    portal_transition.progress = 1.0 - portal_transition.timer.fraction();
+
+                    if portal_transition.timer.finished() {
+                        portal_transition.state = PortalTransitionState::Inactive;
+                        portal_transition.progress = 0.0;
+                        portal_transition.timer.reset();
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn render_portal_transition(
+    mut frame: ResMut<AsciiFrame>,
+    grid: Res<AsciiGrid>,
+    portal_transition: Res<PortalTransition>,
+    player_query: Query<&GridPosition, With<PlayerTag>>,
+    portal_query: Query<&Portal>,
+    camera_offset: Res<CameraOffset>,
+) {
+    if portal_transition.progress <= 0.0 {
+        return;
+    }
+
+    if let (Ok(_player), Some(portal)) = (player_query.single(), portal_query.iter().next()) {
+        let portal_world = portal.position;
+        let screen_pos = world_to_screen(portal_world - camera_offset.0, grid.grid_size);
+        let radius = (portal_transition.progress * 20.0) as i32;
+        for dy in -radius..=radius {
+            for dx in -radius..=radius {
+                let distance = ((dx * dx + dy * dy) as f32).sqrt();
+                if distance <= radius as f32 && distance >= (radius - 1) as f32 {
+                    let x = screen_pos.x + dx;
+                    let y = screen_pos.y + dy;
+                    if (0..grid.grid_size.x as i32).contains(&x)
+                        && (0..grid.grid_size.y as i32).contains(&y)
+                    {
+                        let ch = match portal_transition.progress {
+                            p if p < 0.25 => '.',
+                            p if p < 0.5 => '*',
+                            p if p < 0.75 => '+',
+                            _ => '#',
+                        };
+                        frame.put_char(IVec2::new(x, y), ch, Color::WHITE, Color::NONE);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn world_to_screen(world_position: IVec2, grid_size: UVec2) -> IVec2 {
+    IVec2::new(world_position.x, grid_size.y as i32 - 1 - world_position.y)
+}

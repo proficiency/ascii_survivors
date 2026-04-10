@@ -5,7 +5,7 @@ use bevy::{
     scene::{DynamicScene, InstanceId, SceneSpawner},
 };
 
-use crate::plugins::schedule::GameSet;
+use crate::plugins::core::GameSet;
 use crate::resources::{AsciiFrame, AsciiGrid, FadeTimer, GameState, LoadingTimer};
 
 pub struct GameScenesPlugin;
@@ -342,8 +342,7 @@ fn render_progress_bar(
     }
 
     let percent = format!("{:.0}%", (progress * 100.0).clamp(0.0, 100.0));
-    let percent_column =
-        ((grid.grid_size.x as i32 - percent.len() as i32) / 2).max(0) as usize;
+    let percent_column = ((grid.grid_size.x as i32 - percent.len() as i32) / 2).max(0) as usize;
     let label_row = bar.label_row.max(0) as usize;
     frame.put_string(
         IVec2::new(percent_column as i32, label_row as i32),
