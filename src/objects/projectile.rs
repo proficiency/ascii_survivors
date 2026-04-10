@@ -1,16 +1,14 @@
-use crate::CameraOffset;
-use crate::objects::boss::Boss;
-use crate::objects::enemy::Enemy;
-use crate::objects::orb::Orb;
-use crate::objects::player::Player;
-use crate::resources::channels::*;
+use crate::events::*;
+use crate::objects::{Boss, Enemy, GridPosition, Orb, PlayerTag};
+use crate::plugins::audio::*;
+use crate::plugins::world::cleanup::Despawn;
+use crate::resources::AsciiGrid;
+use crate::resources::CameraOffset;
 use crate::resources::kill_count::KillCount;
 use crate::resources::scene_lock::SceneLock;
 use crate::resources::timers::ProjectileCooldownTimer;
-use crate::systems::cleanup::Despawn;
 use bevy::prelude::*;
-use bevy_ascii_terminal::*;
-use bevy_kira_audio::prelude::*;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Component)]
 pub struct Projectile {
@@ -20,49 +18,34 @@ pub struct Projectile {
     pub damage: f32,
     pub speed: f32,
     pub lifetime: f32,
-    pub max_lifetime: f32,
-}
-
-impl Projectile {
-    pub fn new(position: IVec2, target: Option<Entity>, damage: f32, speed: f32) -> Self {
-        Self {
-            position,
-            target,
-            target_last_position: None,
-            damage,
-            speed,
-            lifetime: 3.0,
-            max_lifetime: 3.0,
-        }
-    }
 }
 
 #[derive(Component)]
 pub struct Fireball;
 
+#[allow(clippy::too_many_arguments)]
 pub fn auto_cast(
     mut commands: Commands,
-    player_query: Query<&Player>,
+    player_query: Query<&GridPosition, With<PlayerTag>>,
     enemy_query: Query<(Entity, &Enemy)>,
     boss_query: Query<(Entity, &Boss)>,
     time: Res<Time>,
     mut timer: ResMut<ProjectileCooldownTimer>,
-    audio: Res<AudioChannel<Sfx>>,
-    asset_server: Res<AssetServer>,
+    mut audio_events: EventWriter<AudioEvent>,
     _scene_lock: Res<SceneLock>,
 ) {
     timer.0.tick(time.delta());
 
     // is it time to fire a new projectile?
     if timer.0.finished()
-        && let Ok(player) = player_query.single()
+        && let Ok(player_pos) = player_query.single()
     {
         let mut nearest_target_entity: Option<Entity> = None;
         let mut min_distance = i32::MAX;
 
         for (enemy_entity, enemy) in enemy_query.iter() {
             let enemy_world_pos = enemy.position;
-            let player_world_pos = player.world_position;
+            let player_world_pos = player_pos.world;
 
             let distance = (enemy_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
@@ -73,7 +56,7 @@ pub fn auto_cast(
 
         for (boss_entity, boss) in boss_query.iter() {
             let boss_world_pos = boss.get_head_position();
-            let player_world_pos = player.world_position;
+            let player_world_pos = player_pos.world;
 
             let distance = (boss_world_pos - player_world_pos).length_squared();
             if distance < min_distance {
@@ -84,7 +67,7 @@ pub fn auto_cast(
 
         // if we're targeting the nearest enemy, attack it
         if let Some(target_entity) = nearest_target_entity {
-            let player_position = player.world_position;
+            let player_position = player_pos.world;
 
             for _ in 0..3 {
                 commands.spawn((Projectile {
@@ -94,169 +77,167 @@ pub fn auto_cast(
                     damage: 25.0,                // do some damage
                     speed: 85.0,                 // travel slowly
                     lifetime: 3.0,               // lifetime in seconds
-                    max_lifetime: 3.0,           // max lifetime in seconds
                 },));
             }
 
-            audio
-                .play(asset_server.load("sfx/25_Wind_01.wav"))
-                .with_volume(0.25);
+            audio_events.write(AudioEvent {
+                channel: AudioChannelType::Sfx,
+                command: AudioCommand::Play {
+                    audio: "sfx/25_Wind_01.wav",
+                    looped: false,
+                    volume: Some(0.25),
+                },
+            });
+
             timer.0.reset();
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_projectiles(
     mut commands: Commands,
     mut projectile_query: Query<(Entity, &mut Projectile), Without<Fireball>>,
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
-    terminal_query: Query<&Terminal>,
+    grid: Res<AsciiGrid>,
     camera_offset: Res<CameraOffset>,
     time: Res<Time>,
     _scene_lock: Res<SceneLock>,
 ) {
-    if let Ok(terminal) = terminal_query.single() {
-        let terminal_size = terminal.size();
+    let terminal_size = grid.grid_size;
 
-        for (entity, mut projectile) in projectile_query.iter_mut() {
-            projectile.lifetime -= time.delta_secs();
-            if projectile.lifetime <= 0.0 {
-                commands.entity(entity).insert(Despawn);
-                continue;
+    for (entity, mut projectile) in projectile_query.iter_mut() {
+        projectile.lifetime -= time.delta_secs();
+        if projectile.lifetime <= 0.0 {
+            commands.entity(entity).insert(Despawn);
+            continue;
+        }
+
+        let speed = projectile.speed * time.delta_secs();
+        let mut target_exists = false;
+
+        if let Some(target_entity) = projectile.target {
+            if let Ok(target_enemy) = enemy_query.get(target_entity) {
+                projectile.target_last_position = Some(target_enemy.position);
+
+                let direction = (target_enemy.position - projectile.position)
+                    .as_vec2()
+                    .normalize_or_zero();
+
+                target_exists = true;
+                projectile.position += (direction * speed).as_ivec2();
+            }
+            // we can't find an enemy, but are there any bosses?
+            else if let Ok(target_boss) = boss_query.get(target_entity) {
+                projectile.target_last_position = Some(target_boss.get_head_position());
+
+                let direction = (target_boss.get_head_position() - projectile.position)
+                    .as_vec2()
+                    .normalize_or_zero();
+
+                target_exists = true;
+                projectile.position += (direction * speed).as_ivec2();
             }
 
-            let speed = projectile.speed * time.delta_secs();
-            let mut target_exists = false;
+            if projectile.target_last_position.is_some() {
+                let last_position = projectile.target_last_position.unwrap();
+                let direction = (last_position - projectile.position)
+                    .as_vec2()
+                    .normalize_or_zero();
 
-            if let Some(target_entity) = projectile.target {
-                if let Ok(target_enemy) = enemy_query.get(target_entity) {
-                    projectile.target_last_position = Some(target_enemy.position);
+                projectile.position += (direction * speed)
+                    .as_ivec2()
+                    .clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
 
-                    let direction = (target_enemy.position - projectile.position)
-                        .as_vec2()
-                        .normalize_or_zero();
-
-                    target_exists = true;
-                    projectile.position += (direction * speed).as_ivec2();
-                }
-                // we can't find an enemy, but are there any bosses?
-                else if let Ok(target_boss) = boss_query.get(target_entity) {
-                    projectile.target_last_position = Some(target_boss.get_head_position());
-
-                    let direction = (target_boss.get_head_position() - projectile.position)
-                        .as_vec2()
-                        .normalize_or_zero();
-
-                    target_exists = true;
-                    projectile.position += (direction * speed).as_ivec2();
-                }
-
-                if projectile.target_last_position.is_some() {
-                    let last_position = projectile.target_last_position.unwrap();
-                    let direction = (last_position - projectile.position)
-                        .as_vec2()
-                        .normalize_or_zero();
-
-                    projectile.position += (direction * speed)
-                        .as_ivec2()
-                        .clamp(IVec2::new(-1, -1), IVec2::new(1, 1));
-
-                    if projectile.position == last_position {
-                        target_exists = false;
-                    } else {
-                        target_exists = true;
-                    }
-                }
+                target_exists = projectile.position != last_position;
             }
+        }
 
-            if !target_exists {
-                commands.entity(entity).insert(Despawn);
-                continue;
-            }
+        if !target_exists {
+            commands.entity(entity).insert(Despawn);
+            continue;
+        }
 
-            let draw_position = projectile.position + camera_offset.0;
-            if draw_position.x < 0
-                || draw_position.x >= terminal_size[0] as i32
-                || draw_position.y < 0
-                || draw_position.y >= terminal_size[1] as i32
-            {
-                // despawn
-                commands.entity(entity).insert(Despawn);
-            }
+        let draw_position = projectile.position - camera_offset.0;
+        if draw_position.x < 0
+            || draw_position.x >= terminal_size.x as i32
+            || draw_position.y < 0
+            || draw_position.y >= terminal_size.y as i32
+        {
+            // despawn
+            commands.entity(entity).insert(Despawn);
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_fireballs(
     mut commands: Commands,
     mut fireball_query: Query<(Entity, &mut Projectile, &Fireball)>,
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
-    terminal_query: Query<&Terminal>,
+    grid: Res<AsciiGrid>,
     camera_offset: Res<CameraOffset>,
     time: Res<Time>,
     _scene_lock: Res<SceneLock>,
 ) {
-    if let Ok(terminal) = terminal_query.single() {
-        let terminal_size = terminal.size();
+    let terminal_size = grid.grid_size;
 
-        for (entity, mut fireball, _fireball_marker) in fireball_query.iter_mut() {
-            fireball.lifetime -= time.delta_secs();
+    for (entity, mut fireball, _fireball_marker) in fireball_query.iter_mut() {
+        fireball.lifetime -= time.delta_secs();
 
-            if fireball.lifetime <= 0.0 {
+        if fireball.lifetime <= 0.0 {
+            commands.entity(entity).insert(Despawn);
+            continue;
+        }
+
+        let speed = fireball.speed * time.delta_secs();
+        let mut target_exists = false;
+        let mut target_position = None;
+
+        if let Some(target_entity) = fireball.target {
+            if let Ok(target_enemy) = enemy_query.get(target_entity) {
+                target_position = Some(target_enemy.position);
+                target_exists = true;
+            } else if let Ok(target_boss) = boss_query.get(target_entity) {
+                target_position = Some(target_boss.get_head_position());
+                target_exists = true;
+            } else if let Some(last_position) = fireball.target_last_position {
+                target_position = Some(last_position);
+            }
+        }
+
+        if let Some(target_pos) = target_position {
+            fireball.target_last_position = Some(target_pos);
+
+            let direction = (target_pos - fireball.position).as_vec2();
+            let distance = direction.length();
+
+            if distance <= speed {
+                fireball.position = target_pos;
                 commands.entity(entity).insert(Despawn);
                 continue;
+            } else {
+                let move_vector = direction.normalize_or_zero() * speed;
+                fireball.position += move_vector.as_ivec2();
+                target_exists = true;
             }
+        }
 
-            let speed = fireball.speed * time.delta_secs();
-            let mut target_exists = false;
-            let mut target_position = None;
+        if !target_exists {
+            commands.entity(entity).insert(Despawn);
+            continue;
+        }
 
-            if let Some(target_entity) = fireball.target {
-                if let Ok(target_enemy) = enemy_query.get(target_entity) {
-                    target_position = Some(target_enemy.position);
-                    target_exists = true;
-                } else if let Ok(target_boss) = boss_query.get(target_entity) {
-                    target_position = Some(target_boss.get_head_position());
-                    target_exists = true;
-                } else if let Some(last_position) = fireball.target_last_position {
-                    target_position = Some(last_position);
-                }
-            }
-
-            if let Some(target_pos) = target_position {
-                fireball.target_last_position = Some(target_pos);
-
-                let direction = (target_pos - fireball.position).as_vec2();
-                let distance = direction.length();
-
-                if distance <= speed {
-                    fireball.position = target_pos;
-                    commands.entity(entity).insert(Despawn);
-                    continue;
-                } else {
-                    // Move toward target
-                    let move_vector = direction.normalize_or_zero() * speed;
-                    fireball.position += move_vector.as_ivec2();
-                    target_exists = true;
-                }
-            }
-
-            if !target_exists {
-                commands.entity(entity).insert(Despawn);
-                continue;
-            }
-
-            let draw_position = fireball.position + camera_offset.0;
-            if draw_position.x < -10
-                || draw_position.x > terminal_size[0] as i32 + 10
-                || draw_position.y < -10
-                || draw_position.y > terminal_size[1] as i32 + 10
-            {
-                // despawn
-                commands.entity(entity).insert(Despawn);
-            }
+        let draw_position = fireball.position - camera_offset.0;
+        if draw_position.x < -10
+            || draw_position.x > terminal_size.x as i32 + 10
+            || draw_position.y < -10
+            || draw_position.y > terminal_size.y as i32 + 10
+        {
+            // despawn
+            commands.entity(entity).insert(Despawn);
         }
     }
 }
@@ -270,41 +251,59 @@ pub fn process_collisions(
     _scene_lock: Res<SceneLock>,
 ) {
     // todo: currently only checking projectiles against enemies
+    let mut projectiles_by_pos: HashMap<IVec2, Vec<(Entity, f32)>> = HashMap::new();
     for (projectile_entity, projectile) in projectile_query.iter() {
-        for (enemy_entity, mut enemy) in enemy_query.iter_mut() {
-            if projectile.position == enemy.position {
-                if enemy.health > 0.0 {
-                    // take damage
-                    enemy.health -= projectile.damage;
+        projectiles_by_pos
+            .entry(projectile.position)
+            .or_default()
+            .push((projectile_entity, projectile.damage));
+    }
 
-                    // if enemy's health pool is depleted, mark it for despawn
-                    if enemy.health <= 0.0 {
-                        // spawn an orb at the enemy's position before despawning
-                        commands.spawn(Orb::new(enemy.position, 10));
-                        commands.entity(enemy_entity).insert(Despawn);
-                        kill_count.enemies += 1;
-                    }
-                }
+    for (enemy_entity, mut enemy) in enemy_query.iter_mut() {
+        let Some(projectiles) = projectiles_by_pos.get(&enemy.position) else {
+            continue;
+        };
 
-                // mark projectile for despawn
-                commands.entity(projectile_entity).insert(Despawn);
-            }
+        if enemy.health <= 0.0 {
+            continue;
         }
 
-        for (boss_entity, mut boss) in boss_query.iter_mut() {
-            for (segment_index, segment) in boss.segments.iter().enumerate() {
-                if projectile.position == segment.position {
-                    let is_defeated = boss.take_damage(projectile.damage, segment_index);
-                    if is_defeated {
-                        for segment in &boss.segments {
-                            commands.spawn(Orb::new(segment.position, 50)); // bosses are worth more experience than normal enemies
-                        }
-                        commands.entity(boss_entity).insert(Despawn);
-                        kill_count.enemies += 1;
-                    }
+        for (projectile_entity, damage) in projectiles {
+            enemy.health -= *damage;
+            commands.entity(*projectile_entity).insert(Despawn);
+            if enemy.health <= 0.0 {
+                commands.spawn(Orb::new(enemy.position, 10));
+                commands.entity(enemy_entity).insert(Despawn);
+                kill_count.enemies += 1;
+                break;
+            }
+        }
+    }
 
-                    commands.entity(projectile_entity).insert(Despawn);
-                    break; // ensure a projectile can only damage one segment at a time
+    let mut boss_used_projectiles: HashSet<Entity> = HashSet::new();
+    for (boss_entity, mut boss) in boss_query.iter_mut() {
+        let segment_count = boss.segments.len();
+        for segment_index in 0..segment_count {
+            let segment_position = boss.segments[segment_index].position;
+            let Some(projectiles) = projectiles_by_pos.get(&segment_position) else {
+                continue;
+            };
+
+            for (projectile_entity, damage) in projectiles {
+                if boss_used_projectiles.contains(projectile_entity) {
+                    continue;
+                }
+
+                let is_defeated = boss.take_damage(*damage, segment_index);
+                boss_used_projectiles.insert(*projectile_entity);
+                commands.entity(*projectile_entity).insert(Despawn);
+
+                if is_defeated {
+                    for segment in &boss.segments {
+                        commands.spawn(Orb::new(segment.position, 50));
+                    }
+                    commands.entity(boss_entity).insert(Despawn);
+                    kill_count.enemies += 1;
                 }
             }
         }

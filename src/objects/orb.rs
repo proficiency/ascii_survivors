@@ -1,4 +1,9 @@
-use crate::{objects::*, resources::*, systems::Despawn};
+use crate::{
+    events::LevelUpEvent,
+    objects::{Experience, GridPosition, MoveSpeed, PlayerTag, experience_for_level},
+    resources::*,
+    plugins::world::cleanup::Despawn,
+};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -18,20 +23,19 @@ impl Orb {
     }
 }
 
-/// orbs within a certain radius will move towards the player with increasing speed.
 pub fn orb_movement(
     mut orb_query: Query<&mut Orb>,
-    player_query: Query<&Player>,
+    player_query: Query<(&GridPosition, &MoveSpeed), With<PlayerTag>>,
     time: Res<Time>,
     _camera_offset: Res<CameraOffset>,
 ) {
-    if let Ok(player) = player_query.single() {
-        let player_world_pos = player.world_position;
+    if let Ok((pos, speed)) = player_query.single() {
+        let player_world_pos = pos.world;
 
         for mut orb in orb_query.iter_mut() {
             let direction_to_player = (player_world_pos - orb.position).as_vec2();
             let distance = direction_to_player.length();
-            let max_speed: f32 = player.speed * 1.15; // just so the player isn't able to outrun the orbs and create a mess
+            let max_speed: f32 = **speed * 1.15; // just so the player isn't able to outrun the orbs and create a mess
 
             const ATTRACTION_RADIUS: f32 = 20.0;
             const MIN_SPEED: f32 = 2.0;
@@ -51,24 +55,28 @@ pub fn orb_movement(
 /// when an orb is within 1 unit of the player, it is despawned and the player gains experience.
 pub fn process_orb_collection(
     mut commands: Commands,
-    mut player_query: Query<&mut Player>,
+    mut player_query: Query<(Entity, &GridPosition, &mut Experience), With<PlayerTag>>,
     orb_query: Query<(Entity, &Orb)>,
+    mut level_up_events: EventWriter<LevelUpEvent>,
     _camera_offset: Res<CameraOffset>,
 ) {
-    if let Ok(mut player) = player_query.single_mut() {
-        let player_world_pos = player.world_position;
+    if let Ok((player_entity, pos, mut xp)) = player_query.single_mut() {
+        let player_world_pos = pos.world;
 
         for (orb_entity, orb) in orb_query.iter() {
             let distance = (player_world_pos - orb.position).as_vec2().length();
             if distance <= 1.0 {
-                player.experience += orb.experience;
+                xp.current += orb.experience;
                 commands.entity(orb_entity).insert(Despawn);
 
-                // Check for level up
-                while player.experience >= player.experience_to_next_level {
-                    player.experience -= player.experience_to_next_level;
-                    player.level += 1;
-                    player.experience_to_next_level = experience_for_level(player.level);
+                while xp.current >= xp.to_next {
+                    xp.current -= xp.to_next;
+                    xp.level += 1;
+                    xp.to_next = experience_for_level(xp.level);
+                    level_up_events.write(LevelUpEvent {
+                        entity: player_entity,
+                        new_level: xp.level,
+                    });
                 }
             }
         }

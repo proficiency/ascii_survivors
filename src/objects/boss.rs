@@ -3,7 +3,6 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct Boss {
     pub health: f32,
-    pub max_health: f32,
     pub segments: Vec<BossSegment>,
     pub speed: f32,
     pub damage: f32,
@@ -22,7 +21,6 @@ pub struct BossSegment {
 pub enum SegmentType {
     Regular,
     Weakspot { damage_multiplier: f32 },
-    Invulnerable,
 }
 
 #[derive(Clone)]
@@ -45,7 +43,6 @@ impl Boss {
 
         Self {
             health,
-            max_health: health,
             segments,
             speed,
             damage,
@@ -97,51 +94,50 @@ fn create_snake_segments(start_pos: IVec2) -> Vec<BossSegment> {
 }
 
 fn create_giant_segments(start_pos: IVec2) -> Vec<BossSegment> {
-    let mut segments = Vec::new();
-
-    segments.push(BossSegment {
-        position: start_pos,
-        segment_type: SegmentType::Weakspot {
-            damage_multiplier: 1.8,
+    vec![
+        BossSegment {
+            position: start_pos,
+            segment_type: SegmentType::Weakspot {
+                damage_multiplier: 1.8,
+            },
+            character: 'G',
+            color: Color::linear_rgb(0.2, 0.8, 0.2),
         },
-        character: 'G',
-        color: Color::linear_rgb(0.2, 0.8, 0.2),
-    });
-
-    segments.push(BossSegment {
-        position: start_pos + IVec2::new(0, -1),
-        segment_type: SegmentType::Regular,
-        character: 'B',
-        color: Color::linear_rgb(0.1, 0.6, 0.1),
-    });
-
-    segments.push(BossSegment {
-        position: start_pos + IVec2::new(-1, -1),
-        segment_type: SegmentType::Regular,
-        character: '/',
-        color: Color::linear_rgb(0.1, 0.6, 0.1),
-    });
-
-    segments.push(BossSegment {
-        position: start_pos + IVec2::new(1, -1),
-        segment_type: SegmentType::Regular,
-        character: '\\',
-        color: Color::linear_rgb(0.1, 0.6, 0.1),
-    });
-
-    segments.push(BossSegment {
-        position: start_pos + IVec2::new(-1, 1),
-        segment_type: SegmentType::Regular,
-        character: '/',
-        color: Color::linear_rgb(0.1, 0.6, 0.1),
-    });
-
-    segments.push(BossSegment {
-        position: start_pos + IVec2::new(1, 1),
-        segment_type: SegmentType::Regular,
-        character: '\\',
-        color: Color::linear_rgb(0.1, 0.6, 0.1),
-    });
-
-    segments
+        BossSegment {
+            position: start_pos + IVec2::new(0, -1),
+            segment_type: SegmentType::Regular,
+            character: 'B',
+            color: Color::linear_rgb(0.1, 0.6, 0.1),
+        },
+        BossSegment {
+            position: start_pos + IVec2::new(0, -1),
+            segment_type: SegmentType::Regular,
+            character: 'B',
+            color: Color::linear_rgb(0.1, 0.6, 0.1),
+        },
+        BossSegment {
+            position: start_pos + IVec2::new(-1, -1),
+            segment_type: SegmentType::Regular,
+            character: '/',
+            color: Color::linear_rgb(0.1, 0.6, 0.1),
+        },
+        BossSegment {
+            position: start_pos + IVec2::new(1, -1),
+            segment_type: SegmentType::Regular,
+            character: '\\',
+            color: Color::linear_rgb(0.1, 0.6, 0.1),
+        },
+        BossSegment {
+            position: start_pos + IVec2::new(-1, 1),
+            segment_type: SegmentType::Regular,
+            character: '/',
+            color: Color::linear_rgb(0.1, 0.6, 0.1),
+        },
+        BossSegment {
+            position: start_pos + IVec2::new(1, 1),
+            segment_type: SegmentType::Regular,
+            character: '\\',
+            color: Color::linear_rgb(0.1, 0.6, 0.1),
+        },
+    ]
 }

@@ -1,6 +1,6 @@
+use crate::events::UiActionEvent;
 use bevy::prelude::*;
 use iyes_perf_ui::prelude::*;
-
 pub struct PerformanceOverlayPlugin;
 
 impl Plugin for PerformanceOverlayPlugin {
@@ -42,18 +42,25 @@ fn spawn_overlay(mut commands: Commands) {
     ));
 }
 
+// todo: because of the way this is structured, you'll only be able to toggle the overlay
+// inside of the menu or game over states, since those are the only states where the input system runs
+// we may want to restructure this in the future so that the overlay can be toggled in-game as well
 fn toggle_overlay(
     mut commands: Commands,
     q_root: Query<Entity, With<PerfUiRoot>>,
-    kbd: Res<ButtonInput<KeyCode>>,
+    mut ui_events: EventReader<UiActionEvent>,
 ) {
     // todo: maybe this should be a configurable keybind?
-    if kbd.just_pressed(KeyCode::Insert) {
-        if let Ok(e) = q_root.single() {
-            // despawn the existing Perf UI
-            commands.entity(e).despawn();
-        } else {
-            spawn_overlay(commands);
+    for event in ui_events.read() {
+        if let UiActionEvent::Info = event {
+            if let Ok(e) = q_root.single() {
+                // despawn the existing Perf UI
+                commands.entity(e).despawn();
+            } else {
+                spawn_overlay(commands);
+            }
+
+            break;
         }
     }
 }
