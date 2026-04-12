@@ -11,13 +11,15 @@ pub mod progression;
 pub mod rendering;
 pub mod scene;
 pub mod spell;
+pub mod upgrade;
 pub mod world;
 
 use crate::plugins::{
     ambient::AmbientPlugin, ascii_render::AsciiRenderPlugin, audio::AudioManagerPlugin,
     bootstrap::BootstrapPlugin, core::CorePlugin, enemy::EnemyPlugin, input::InputPlugin,
     interaction::InteractionPlugin, player::PlayerPlugin, progression::ProgressionPlugin,
-    rendering::RenderingPlugin, scene::ScenePlugin, spell::SpellPlugin, world::WorldPlugin,
+    rendering::RenderingPlugin, scene::ScenePlugin, spell::SpellPlugin,
+    upgrade::UpgradePlugin, world::WorldPlugin,
 };
 use crate::scenes::GameScenesPlugin;
 use bevy::prelude::{App, Plugin};
@@ -42,6 +44,7 @@ impl Plugin for AsciiSurvivorsPlugins {
             PlayerPlugin,
             ScenePlugin,
             GameScenesPlugin,
+            UpgradePlugin,
         ));
     }
 }

@@ -115,8 +115,8 @@ fn update_cinematic_camera(
     cinematic.current_offset = cinematic.current_offset.lerp(cinematic.target_offset, t);
 
     camera_offset.0 = IVec2::new(
-        cinematic.current_offset.x.round() as i32,
-        cinematic.current_offset.y.round() as i32,
+        cinematic.current_offset.x.floor() as i32,
+        cinematic.current_offset.y.floor() as i32,
     );
 }
 

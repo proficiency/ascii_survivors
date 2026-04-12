@@ -2,6 +2,7 @@ use crate::{
     effects::*,
     objects::{Enemy, GridPosition, Health, PlayerTag},
     resources::*,
+    upgrades::PlayerModifiers,
 };
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -14,6 +15,7 @@ pub fn enemy_ai(
     mut timer: ResMut<EnemyMovementTimer>,
     mut damage_effect_timer: ResMut<DamageEffectTimer>,
     _scene_lock: Res<SceneLock>,
+    modifiers: Res<PlayerModifiers>,
 ) {
     timer.0.tick(time.delta());
 
@@ -103,7 +105,7 @@ pub fn enemy_ai(
     }
 
     if player_damage_taken > 0.0 {
-        health.current -= player_damage_taken;
+        health.current -= player_damage_taken * modifiers.incoming_damage_multiplier;
         commands.entity(player_entity).insert(StatusEffect {
             color: Color::linear_rgb(1.0, 0.0, 0.0),
         });

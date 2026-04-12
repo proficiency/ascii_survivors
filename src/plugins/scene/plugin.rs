@@ -96,6 +96,7 @@ fn despawn_all_entities(
     enemy_query: Query<Entity, With<Enemy>>,
     projectile_query: Query<Entity, With<Projectile>>,
     orb_query: Query<Entity, With<Orb>>,
+    upgrade_orb_query: Query<Entity, With<UpgradeOrb>>,
 ) {
     for entity in player_query.iter() {
         commands.entity(entity).despawn();
@@ -107,6 +108,9 @@ fn despawn_all_entities(
         commands.entity(entity).despawn();
     }
     for entity in orb_query.iter() {
+        commands.entity(entity).despawn();
+    }
+    for entity in upgrade_orb_query.iter() {
         commands.entity(entity).despawn();
     }
 }

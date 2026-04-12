@@ -1,5 +1,5 @@
 use crate::events::*;
-use crate::objects::{Boss, Enemy, GridPosition, Orb, PlayerTag};
+use crate::objects::{Boss, Enemy, GridPosition, Orb, PlayerTag, UpgradeOrb};
 use crate::plugins::audio::*;
 use crate::plugins::world::cleanup::Despawn;
 use crate::resources::AsciiGrid;
@@ -33,64 +33,50 @@ pub fn auto_cast(
     mut timer: ResMut<ProjectileCooldownTimer>,
     mut audio_events: EventWriter<AudioEvent>,
     _scene_lock: Res<SceneLock>,
+    modifiers: Res<crate::upgrades::PlayerModifiers>,
 ) {
     timer.0.tick(time.delta());
 
-    // is it time to fire a new projectile?
     if timer.0.finished()
         && let Ok(player_pos) = player_query.single()
     {
-        let mut nearest_target_entity: Option<Entity> = None;
-        let mut min_distance = i32::MAX;
+        // auto_cast always fires 3 base projectiles, distributed across nearest targets
+        let target_count = (modifiers.get_total_projectiles(crate::spells::SpellType::MagicMissile) as usize).max(3);
+        let targets = crate::plugins::player::spell_casting::find_nearest_targets(
+            player_pos.world,
+            &enemy_query,
+            &boss_query,
+            target_count,
+        );
 
-        for (enemy_entity, enemy) in enemy_query.iter() {
-            let enemy_world_pos = enemy.position;
-            let player_world_pos = player_pos.world;
-
-            let distance = (enemy_world_pos - player_world_pos).length_squared();
-            if distance < min_distance {
-                min_distance = distance;
-                nearest_target_entity = Some(enemy_entity);
-            }
+        if targets.is_empty() {
+            return;
         }
 
-        for (boss_entity, boss) in boss_query.iter() {
-            let boss_world_pos = boss.get_head_position();
-            let player_world_pos = player_pos.world;
-
-            let distance = (boss_world_pos - player_world_pos).length_squared();
-            if distance < min_distance {
-                min_distance = distance;
-                nearest_target_entity = Some(boss_entity);
-            }
+        let player_position = player_pos.world;
+        let offsets = crate::spells::arcanum::spread_offsets(3);
+        for (i, offset) in offsets.iter().enumerate() {
+            let target = targets[i % targets.len()];
+            commands.spawn((Projectile {
+                position: player_position + *offset,
+                target: Some(target),
+                target_last_position: None,
+                damage: 25.0,
+                speed: 85.0,
+                lifetime: 3.0,
+            },));
         }
 
-        // if we're targeting the nearest enemy, attack it
-        if let Some(target_entity) = nearest_target_entity {
-            let player_position = player_pos.world;
+        audio_events.write(AudioEvent {
+            channel: AudioChannelType::Sfx,
+            command: AudioCommand::Play {
+                audio: "sfx/25_Wind_01.wav",
+                looped: false,
+                volume: Some(0.25),
+            },
+        });
 
-            for _ in 0..3 {
-                commands.spawn((Projectile {
-                    position: player_position,   // spawn at player origin
-                    target: Some(target_entity), // travel towards a target
-                    target_last_position: None,  // no last position yet
-                    damage: 25.0,                // do some damage
-                    speed: 85.0,                 // travel slowly
-                    lifetime: 3.0,               // lifetime in seconds
-                },));
-            }
-
-            audio_events.write(AudioEvent {
-                channel: AudioChannelType::Sfx,
-                command: AudioCommand::Play {
-                    audio: "sfx/25_Wind_01.wav",
-                    looped: false,
-                    volume: Some(0.25),
-                },
-            });
-
-            timer.0.reset();
-        }
+        timer.0.reset();
     }
 }
 
@@ -302,6 +288,9 @@ pub fn process_collisions(
                     for segment in &boss.segments {
                         commands.spawn(Orb::new(segment.position, 50));
                     }
+                    // bosses drop a rare upgrade orb
+                    let head_pos = boss.get_head_position();
+                    commands.spawn(UpgradeOrb::new(head_pos));
                     commands.entity(boss_entity).insert(Despawn);
                     kill_count.enemies += 1;
                 }
