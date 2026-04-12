@@ -241,7 +241,7 @@ pub fn draw_scene(
             let (ch, color) = if fireball.is_some() {
                 ('@', Color::linear_rgb(1.0, 0.3, 0.0))
             } else {
-                ('*', Color::linear_rgba(1.0, 0.7, 0.0, 1.0))
+                ('*', Color::linear_rgb(0.7, 0.2, 1.0))
             };
             frame.put_char(draw_position, ch, color, Color::NONE);
         }
