@@ -1,4 +1,5 @@
 use crate::objects::{Fireball, Projectile};
+use crate::upgrades::PlayerModifiers;
 use bevy::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -32,8 +33,8 @@ impl Arcanum {
         }
     }
 
-    pub fn can_cast_spell(&self, spell_type: SpellType) -> bool {
-        let mana_cost = self.get_spell_mana_cost(spell_type);
+    pub fn can_cast_spell(&self, spell_type: SpellType, modifiers: &PlayerModifiers) -> bool {
+        let mana_cost = self.get_spell_mana_cost(spell_type, modifiers);
         self.mana >= mana_cost && self.spells.contains(&spell_type)
     }
 
@@ -42,55 +43,68 @@ impl Arcanum {
         commands: &mut Commands,
         spell_type: SpellType,
         player_pos: IVec2,
-        target: Option<Entity>,
+        targets: &[Entity],
+        modifiers: &PlayerModifiers,
     ) -> Result<(), &'static str> {
-        let mana_cost = self.get_spell_mana_cost(spell_type);
+        if targets.is_empty() {
+            return Err("no targets available");
+        }
+
+        let mana_cost = self.get_spell_mana_cost(spell_type, modifiers);
         if !self.consume_mana(mana_cost) {
             return Err("not enough mana to cast spell");
         }
 
+        let total = modifiers.get_total_projectiles(spell_type);
+        let offsets = spread_offsets(total);
+
         match spell_type {
             SpellType::Fireball => {
-                if target.is_some() {
+                let damage = modifiers.get_damage(spell_type, 25.0);
+                let speed = modifiers.get_speed(spell_type, 150.0);
+
+                for (i, offset) in offsets.iter().enumerate() {
+                    let target = targets[i % targets.len()];
                     commands.spawn((
                         Projectile {
-                            position: player_pos,
-                            target,
+                            position: player_pos + *offset,
+                            target: Some(target),
                             target_last_position: None,
-                            damage: 25.0,
-                            speed: 150.0,
+                            damage,
+                            speed,
                             lifetime: 3.0,
                         },
                         Fireball,
                     ));
-                    Ok(())
-                } else {
-                    Err("tried to cast Fireball on an invalid target")
                 }
+                Ok(())
             }
             SpellType::MagicMissile => {
-                if target.is_some() {
+                let damage = modifiers.get_damage(spell_type, 15.0);
+                let speed = modifiers.get_speed(spell_type, 125.0);
+
+                for (i, offset) in offsets.iter().enumerate() {
+                    let target = targets[i % targets.len()];
                     commands.spawn((Projectile {
-                        position: player_pos,
-                        target,
+                        position: player_pos + *offset,
+                        target: Some(target),
                         target_last_position: None,
-                        damage: 15.0,
-                        speed: 125.0,
+                        damage,
+                        speed,
                         lifetime: 3.0,
                     },));
-                    Ok(())
-                } else {
-                    Err("tried to cast Magic Missile on an invalid target")
                 }
+                Ok(())
             }
         }
     }
 
-    pub fn get_spell_mana_cost(&self, spell_type: SpellType) -> f32 {
-        match spell_type {
+    pub fn get_spell_mana_cost(&self, spell_type: SpellType, modifiers: &PlayerModifiers) -> f32 {
+        let base_cost = match spell_type {
             SpellType::Fireball => 20.0,
             SpellType::MagicMissile => 15.0,
-        }
+        };
+        modifiers.get_mana_cost(spell_type, base_cost)
     }
 
     pub fn get_spell_name(&self, spell_type: SpellType) -> &'static str {
@@ -118,4 +132,19 @@ impl Default for Arcanum {
     fn default() -> Self {
         Self::new()
     }
+}
+
+// fan projectiles out from center in case of multiple projectiles
+pub fn spread_offsets(count: u32) -> Vec<IVec2> {
+    if count <= 1 {
+        return vec![IVec2::ZERO];
+    }
+    let half = count as i32 / 2;
+    (0..count as i32)
+        .map(|i| {
+            let offset = i - half;
+            println!("{}", IVec2::new(offset, offset.abs() % 2));
+            IVec2::new(offset, offset.abs() % 2)
+        })
+        .collect()
 }

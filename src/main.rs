@@ -7,6 +7,7 @@ mod plugins;
 mod resources;
 mod scenes;
 mod spells;
+mod upgrades;
 
 use crate::{debug::DebugPlugins, plugins::AsciiSurvivorsPlugins};
 use bevy::prelude::*;

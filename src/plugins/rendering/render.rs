@@ -86,9 +86,9 @@ pub fn render_system(
     >,
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
-    projectile_query: Query<&Projectile>,
-    fireball_query: Query<&Projectile, With<Fireball>>,
+    projectile_query: Query<(&Projectile, Option<&Fireball>)>,
     orb_query: Query<&Orb>,
+    upgrade_orb_query: Query<&UpgradeOrb>,
     portal_query: Query<&Portal>,
     campfire_query: Query<&Campfire>,
     ember_query: Query<&Ember>,
@@ -105,8 +105,8 @@ pub fn render_system(
         enemy_query,
         boss_query,
         projectile_query,
-        fireball_query,
         orb_query,
+        upgrade_orb_query,
         portal_query,
         campfire_query,
         ember_query,
@@ -142,6 +142,7 @@ fn draw_map(frame: &mut AsciiFrame, map: &Map, camera_offset: IVec2, terminal_si
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 pub fn draw_scene(
     player_query: Query<
         (
@@ -155,9 +156,9 @@ pub fn draw_scene(
     >,
     enemy_query: Query<&Enemy>,
     boss_query: Query<&Boss>,
-    projectile_query: Query<&Projectile>,
-    fireball_query: Query<&Projectile, With<Fireball>>,
+    projectile_query: Query<(&Projectile, Option<&Fireball>)>,
     orb_query: Query<&Orb>,
+    upgrade_orb_query: Query<&UpgradeOrb>,
     portal_query: Query<&Portal>,
     campfire_query: Query<&Campfire>,
     ember_query: Query<&Ember>,
@@ -191,6 +192,20 @@ pub fn draw_scene(
         }
     }
 
+    for orb in upgrade_orb_query.iter() {
+        let world_position = orb.position - camera_offset.0;
+        let draw_position = world_to_screen(world_position, terminal_size);
+
+        if frame.contains(draw_position) {
+            frame.put_char(
+                draw_position,
+                'O',
+                Color::linear_rgb(1.0, 0.85, 0.0),
+                Color::NONE,
+            );
+        }
+    }
+
     // draw enemies
     for enemy in enemy_query.iter() {
         let world_position = enemy.position - camera_offset.0;
@@ -218,33 +233,17 @@ pub fn draw_scene(
         }
     }
 
-    // draw normal projectiles
-    for projectile in projectile_query.iter() {
+    for (projectile, fireball) in projectile_query.iter() {
         let world_position = projectile.position - camera_offset.0;
         let draw_position = world_to_screen(world_position, terminal_size);
 
         if frame.contains(draw_position) {
-            frame.put_char(
-                draw_position,
-                '*',
-                Color::linear_rgba(1.0, 0.7, 0.0, 1.0),
-                Color::NONE,
-            );
-        }
-    }
-
-    // draw fireballs
-    for fireball in fireball_query.iter() {
-        let world_position = fireball.position - camera_offset.0;
-        let draw_position = world_to_screen(world_position, terminal_size);
-
-        if frame.contains(draw_position) {
-            frame.put_char(
-                draw_position,
-                '@',
-                Color::linear_rgb(1.0, 0.3, 0.0),
-                Color::NONE,
-            );
+            let (ch, color) = if fireball.is_some() {
+                ('@', Color::linear_rgb(1.0, 0.3, 0.0))
+            } else {
+                ('*', Color::linear_rgba(1.0, 0.7, 0.0, 1.0))
+            };
+            frame.put_char(draw_position, ch, color, Color::NONE);
         }
     }
 
@@ -323,12 +322,18 @@ pub fn draw_scene(
     if let Ok((_, health, xp, arcanum, _)) = player_query.single() {
         let height = frame.size.y as i32;
         let base_y = (height - 3).max(0) as usize;
+        // 1 bar char per 5 hp/mana/xp, clamped to fit on screen
+        let max_bar_len = (frame.size.x as usize).saturating_sub(15);
+        let health_bar_len = (health.max as usize / 5).clamp(20, max_bar_len);
+        let mana_bar_len = (arcanum.max_mana as usize / 5).clamp(20, max_bar_len);
+        let xp_bar_len = (xp.to_next as usize / 5).clamp(20, max_bar_len);
+
         draw_resource_bar(
             frame,
             ResourceBarConfig {
                 resource_name: "Health",
                 filled_char: '#',
-                bar_length: 20,
+                bar_length: health_bar_len,
                 current_value: health.current as usize,
                 max_value: health.max as usize,
                 bar_color: Color::linear_rgba(0.0, 1.0, 0.1, 1.0),
@@ -341,7 +346,7 @@ pub fn draw_scene(
             ResourceBarConfig {
                 resource_name: "Mana",
                 filled_char: '#',
-                bar_length: 20,
+                bar_length: mana_bar_len,
                 current_value: arcanum.mana as usize,
                 max_value: arcanum.max_mana as usize,
                 bar_color: Color::linear_rgba(0.15, 0.45, 1.0, 1.0),
@@ -354,7 +359,7 @@ pub fn draw_scene(
             ResourceBarConfig {
                 resource_name: &format!("XP (Lvl {})", xp.level),
                 filled_char: '#',
-                bar_length: 20,
+                bar_length: xp_bar_len,
                 current_value: xp.current as usize,
                 max_value: xp.to_next as usize,
                 bar_color: Color::linear_rgba(0.1, 0.25, 1.0, 1.0),

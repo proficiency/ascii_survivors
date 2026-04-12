@@ -10,6 +10,7 @@ pub mod player;
 pub mod portal;
 pub mod projectile;
 pub mod shop_npc;
+pub mod upgrade_orb;
 
 pub use boss::*;
 pub use campfire::*;
@@ -23,3 +24,4 @@ pub use player::*;
 pub use portal::*;
 pub use projectile::*;
 pub use shop_npc::*;
+pub use upgrade_orb::*;

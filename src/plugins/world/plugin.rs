@@ -25,7 +25,6 @@ impl Plugin for SpawnPlugin {
             (
                 spawn_player,
                 maps::map::load_map_system,
-                write_level_changed_event,
             )
                 .chain(),
         )
@@ -67,6 +66,8 @@ fn spawn_player(
     grid: Res<AsciiGrid>,
     mut cinematic: ResMut<CinematicCamera>,
     mut camera_offset: ResMut<CameraOffset>,
+    level: Res<Level>,
+    mut level_changed_events: EventWriter<crate::events::LevelChangedEvent>,
 ) {
     if player_query.is_empty() {
         let screen_center = IVec2::new(
@@ -86,14 +87,10 @@ fn spawn_player(
         bundle.arcanum.learn_spell(SpellType::Fireball);
         bundle.arcanum.learn_spell(SpellType::MagicMissile);
         commands.spawn(bundle);
-    }
-}
 
-fn write_level_changed_event(
-    level: Res<Level>,
-    mut events: EventWriter<crate::events::LevelChangedEvent>,
-) {
-    events.write(crate::events::LevelChangedEvent { new_level: *level });
+        // fire level changed event on initial spawn so the music starts
+        level_changed_events.write(crate::events::LevelChangedEvent { new_level: *level });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -102,6 +99,7 @@ pub fn setup_level_transition(
     enemy_query: Query<Entity, With<Enemy>>,
     projectile_query: Query<Entity, With<Projectile>>,
     orb_query: Query<Entity, With<Orb>>,
+    upgrade_orb_query: Query<Entity, With<crate::objects::UpgradeOrb>>,
     boss_query: Query<Entity, With<Boss>>,
     mut player_query: Query<&mut crate::objects::GridPosition, With<PlayerTag>>,
     mut camera_offset: ResMut<CameraOffset>,
@@ -120,6 +118,9 @@ pub fn setup_level_transition(
         commands.entity(projectile).despawn();
     }
     for orb in orb_query.iter() {
+        commands.entity(orb).despawn();
+    }
+    for orb in upgrade_orb_query.iter() {
         commands.entity(orb).despawn();
     }
 

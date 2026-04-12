@@ -2,7 +2,7 @@ use crate::spells::Arcanum;
 use bevy::prelude::*;
 
 pub fn experience_for_level(level: u32) -> u32 {
-    (100.0 * (level as f32).powf(1.5)) as u32
+    (150.0 * (level as f32).powf(2.0)) as u32
 }
 
 #[derive(Component, Default, Debug, Clone, Copy)]
@@ -32,7 +32,10 @@ impl GridPosition {
     }
 
     pub fn with_screen(screen: IVec2, world: IVec2) -> Self {
-        Self { tile: screen, world }
+        Self {
+            tile: screen,
+            world,
+        }
     }
 }
 
@@ -70,24 +73,11 @@ pub struct PlayerBundle {
     pub move_speed: MoveSpeed,
     pub experience: Experience,
     pub arcanum: Arcanum,
+    pub player_upgrades: crate::upgrades::PlayerUpgrades,
     pub transform: Transform,
 }
 
 impl PlayerBundle {
-    pub fn at(tile: IVec2) -> Self {
-        let mut bundle = Self {
-            grid_position: GridPosition::new(tile),
-            health: Health::new(100.0),
-            move_speed: MoveSpeed::default(),
-            experience: Experience::new(1),
-            arcanum: Arcanum::new(),
-            ..Default::default()
-        };
-
-        bundle.transform.translation = Vec3::new(tile.x as f32, tile.y as f32, 0.0);
-        bundle
-    }
-
     pub fn at_screen(screen: IVec2, world: IVec2) -> Self {
         let mut bundle = Self {
             grid_position: GridPosition::with_screen(screen, world),

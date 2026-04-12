@@ -7,6 +7,7 @@ pub enum GameState {
     Menu,
     FadingIn,
     Game,
+    UpgradeSelection,
     LevelTransition,
     GameOver,
 }

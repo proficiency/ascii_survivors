@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 
 use super::{level_up_system, player_movement};
+use super::spell_casting::mana_regen_system;
 use crate::objects::{
     auto_cast, orb_movement, process_collisions, process_orb_collection, process_projectiles,
+    upgrade_orb_movement, process_upgrade_orb_collection,
 };
 use crate::plugins::core::GameSet;
 use crate::plugins::enemy::{boss_ai, spawn_enemies};
@@ -32,6 +34,14 @@ impl Plugin for PlayerMovementPlugin {
                     .run_if(in_state(GameState::Game))
                     .in_set(GameSet::Gameplay)
                     .after(orb_movement),
+                upgrade_orb_movement
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(process_collisions),
+                process_upgrade_orb_collection
+                    .run_if(in_state(GameState::Game))
+                    .in_set(GameSet::Gameplay)
+                    .after(upgrade_orb_movement),
             ),
         );
     }
@@ -61,10 +71,15 @@ impl Plugin for PlayerPlugin {
         app.add_plugins((PlayerMovementPlugin, PlayerCombatPlugin))
             .add_systems(
                 Update,
-                level_up_system
-                    .run_if(in_state(GameState::Game))
-                    .in_set(GameSet::Gameplay)
-                    .after(process_orb_collection),
+                (
+                    mana_regen_system
+                        .run_if(in_state(GameState::Game))
+                        .in_set(GameSet::Gameplay),
+                    level_up_system
+                        .run_if(in_state(GameState::Game))
+                        .in_set(GameSet::Gameplay)
+                        .after(process_orb_collection),
+                ),
             );
     }
 }
